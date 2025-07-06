@@ -69,3 +69,12 @@ pip install -r requirements.txt
       <li><code>--outputdir</code>: Directory where log files and the generated Excel result file will be stored.</li>
     </ul>
   </li>
+
+  <li>
+    <strong>Recommended:</strong> Install the 
+    <a href="https://marketplace.visualstudio.com/items?itemName=d-biehl.robotcode" target="_blank">
+      Robot Framework Language Server extension for VS Code
+    </a>
+    for enhanced editing support including syntax highlighting, autocomplete, and test explorer integration.
+  </li>
+</ol>
