@@ -73,7 +73,7 @@ pip install -r requirements.txt
   <li>
     <strong>Recommended:</strong> Install the 
     <a href="https://marketplace.visualstudio.com/items?itemName=d-biehl.robotcode" target="_blank">
-      Robot Framework Language Server extension for VS Code
+      RobotCode - Robot Framework Support extension for VS Code
     </a>
     for enhanced editing support including syntax highlighting, autocomplete, and test explorer integration.
   </li>
