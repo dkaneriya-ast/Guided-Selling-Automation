@@ -1,0 +1,41 @@
+1751785485728	geckodriver	INFO	Listening on 127.0.0.1:56446
+1751785488855	mozrunner::runner	INFO	Running command: "C:\\Program Files\\Mozilla Firefox\\firefox.exe" "--marionette" "--remote-debugging-port" "56447" "--remote-allow-hosts" "localhost" "-no-remote" "-profile" "C:\\Users\\Lenovo\\AppData\\Local\\Temp\\rust_mozprofile8gj25D"
+console.warn: services.settings: Ignoring preference override of remote settings server
+console.warn: services.settings: Allow by setting MOZ_REMOTE_SETTINGS_DEVTOOLS=1 in the environment
+Dynamically enable window occlusion 0
+1751785491272	Marionette	INFO	Marionette enabled
+1751785491714	Marionette	INFO	Listening on port 56540
+WebDriver BiDi listening on ws://127.0.0.1:56447
+Read port: 56540
+1751785492178	RemoteAgent	WARN	TLS certificate errors will be ignored for this session
+console.error: CustomizableUI: 
+  Could not localize property 'fxms-bmb-button.tooltiptext'.
+JavaScript error: https://staging.afterall.com/on/demandware.static/Sites-afterall-Site/-/en_US/v1751386483024/app_afterall.js, line 1: ChunkLoadError: Loading chunk 7130 failed.
+(error: https://staging.afterall.com/on/demandware.static/Sites-afterall-Site/-/en_US/v1751386483024/global.memorial.bundle.js)
+JavaScript error: https://staging.afterall.com/on/demandware.static/Sites-afterall-Site/-/en_US/v1751386483024/app_afterall.js, line 1: ChunkLoadError: Loading chunk 2976 failed.
+(error: https://staging.afterall.com/on/demandware.static/Sites-afterall-Site/-/en_US/v1751386483024/page_designer.locations.bundle.js)
+1751785553588	RemoteAgent	WARN	TimedPromise timed out after 500 ms: stacktrace:
+TimedPromise/<@chrome://remote/content/shared/Sync.sys.mjs:448:24
+TimedPromise@chrome://remote/content/shared/Sync.sys.mjs:432:10
+interaction.flushEventLoop@chrome://remote/content/marionette/interaction.sys.mjs:465:10
+webdriverClickElement@chrome://remote/content/marionette/interaction.sys.mjs:218:33
+JavaScript error: https://staging.afterall.com/on/demandware.static/Sites-afterall-Site/-/en_US/v1751386483024/app_afterall.js, line 1: ChunkLoadError: Loading chunk 3869 failed.
+(error: https://staging.afterall.com/on/demandware.static/Sites-afterall-Site/-/en_US/v1751386483024/header.widgets.bundle.js)
+JavaScript error: https://staging.afterall.com/on/demandware.static/Sites-afterall-Site/-/en_US/v1751386483024/app_afterall.js, line 1: ChunkLoadError: Loading chunk 2800 failed.
+(error: https://staging.afterall.com/on/demandware.static/Sites-afterall-Site/-/en_US/v1751386483024/plan.page.widgets.bundle.js)
+JavaScript error: https://staging.afterall.com/on/demandware.static/Sites-afterall-Site/-/en_US/v1751386483024/app_afterall.js, line 1: ChunkLoadError: Loading chunk 7130 failed.
+(error: https://staging.afterall.com/on/demandware.static/Sites-afterall-Site/-/en_US/v1751386483024/global.memorial.bundle.js)
+1751785621180	Marionette	INFO	Stopped listening on port 56540
+Dynamically enable window occlusion 1
+JavaScript warning: https://staging.afterall.com/planning/ line 263 > injectedScript, line 2: Script terminated by timeout at:
+T.fn.init@https://staging.afterall.com/planning/ line 263 > injectedScript:2:292858
+e@https://staging.afterall.com/planning/ line 263 > injectedScript:2:278655
+Mn/window.vwo_$@https://staging.afterall.com/planning/ line 263 > injectedScript:2:68012
+isChangeAppliedOnElForCampaign@https://staging.afterall.com/planning/ line 263 > injectedScript:2:129835
+applyChanges@https://staging.afterall.com/planning/ line 263 > injectedScript:2:132087
+tryApplyingChanges@https://staging.afterall.com/planning/ line 263 > injectedScript:2:130938
+tryApplyingChanges/t.timeout<@https://staging.afterall.com/planning/ line 263 > injectedScript:2:130827
+
+console.error: "Failed to fetch https://ads.mozilla.org/v1/delete_user:" "NetworkError when attempting to fetch resource."
+console.warn: TopSitesFeed: Failed to fetch data from MARS server: NetworkError when attempting to fetch resource.
+JavaScript error: resource://services-settings/RemoteSettingsClient.sys.mjs, line 101: Error: Unknown callback
