@@ -97,13 +97,22 @@ Start Guided Selling Until Disposition Step
     Execute Javascript    arguments[0].click();    ARGUMENTS    ${nextStep}
 
 Perform Guided Selling Flow
-    [Arguments]    ${url}    ${locationId}
+    [Arguments]    ${url}    ${locationId}    ${expectedDispositionOptions}    ${expectedBurialServiceOptions}    ${expectedBurialFacilities}    ${expectedBurialNoFacilities}    ${expectedCremationServiceOptions}    ${expectedCremationFacilities}    ${expectedCremationNoFacilities}
     Open Storefront and Accept Cookies
     # Step 1: Get all disposition options
     Start Guided Selling Until Disposition Step    ${url}
     ${location}=    Get Text    ${locationName}
     @{dispositionOptions}=    Fetch All Disposition Options
     ${dispositionLength}=    Get Length    ${dispositionOptions}
+
+    IF    ${dispositionLength} == 0
+        Fail    No disposition options found for Location ID: ${locationId}
+    END
+
+    IF    ${dispositionLength} != ${expectedDispositionOptions}
+        Fail    Disposition count mismatch at Location ID: ${locationId}. Expected ${expectedDispositionOptions}, but found ${dispositionLength}.
+    END
+
     FOR    ${dispIndex}    IN RANGE    ${dispositionLength}
         @{dispositionOptions}=    Fetch All Disposition Options
         ${disposition}=    Get From List    ${dispositionOptions}    ${dispIndex}
@@ -114,6 +123,20 @@ Perform Guided Selling Flow
         # Step 2: Get all service method options
         @{serviceOptions}=    Fetch All Service Method Options
         ${serviceLength}=    Get Length    ${serviceOptions}
+        
+        
+        IF    ${serviceLength} == 0
+            Fail    No service method options found for Disposition: ${dispLabel} at Location ID: ${locationId}
+        END
+        ${expectedBurialServiceTotalOptions}=    Evaluate    ${expectedBurialServiceOptions} + 1
+        IF    '${dispLabel}' == 'Burial' and ${serviceLength} != ${expectedBurialServiceTotalOptions}
+            Fail    Service count mismatch for Burial at Location ID: ${locationId}. Expected ${expectedBurialServiceTotalOptions}, but found ${serviceLength}.
+        END
+        ${expectedCremationServiceTotalOptions}=    Evaluate    ${expectedCremationServiceOptions} + 1
+        IF    '${dispLabel}' == 'Cremation' and ${serviceLength} != ${expectedCremationServiceTotalOptions}
+            Fail    Service count mismatch for Cremation at Location ID: ${locationId}. Expected ${expectedCremationServiceTotalOptions}, but found ${serviceLength}.
+        END
+
         FOR    ${serviceIndex}    IN RANGE    ${serviceLength}
             IF    ${serviceIndex} != 0
                 @{dispositionOptions}=    Fetch All Disposition Options
@@ -136,7 +159,30 @@ Perform Guided Selling Flow
             Execute Javascript    arguments[0].click();    ARGUMENTS    ${service}
             # Step 3: Package count
             ${packageCount}=    Get Package Count for Current Selection
-
+            IF    ${packageCount} == 0
+                Fail    No packages found for Disposition: ${dispLabel}, Service: ${serviceLabel} at Location ID: ${locationId}
+            END
+            IF    '${dispLabel}' == 'Burial' and '${serviceLabel}' == 'Facilities' and ${packageCount} != ${expectedBurialFacilities}
+               Fail    Package count mismatch for Burial - Facilities at Location ID ${locationId}. Expected ${expectedBurialFacilities}, but found ${packageCount}.
+            END
+            IF    '${dispLabel}' == 'Burial' and '${serviceLabel}' == 'No Facilities' and ${packageCount} != ${expectedBurialNoFacilities}
+                Fail    Package count mismatch for Burial - No Facilities at Location ID ${locationId}. Expected ${expectedBurialNoFacilities}, but found ${packageCount}.
+            END
+            ${expectedBurialTotal}=    Evaluate    ${expectedBurialNoFacilities} + ${expectedBurialFacilities}
+            IF    '${dispLabel}' == 'Burial' and '${serviceLabel}' == 'All' and ${packageCount} != ${expectedBurialTotal}
+                Fail    Package count mismatch for Burial - All at Location ID ${locationId}. Expected ${expectedBurialNoFacilities}, but found ${packageCount}.
+            END
+            IF    '${dispLabel}' == 'Cremation' and '${serviceLabel}' == 'Facilities' and ${packageCount} != ${expectedCremationFacilities}
+                Fail    Package count mismatch for Cremation - Facilities at Location ID ${locationId}. Expected ${expectedCremationFacilities}, but found ${packageCount}.
+            END
+            IF    '${dispLabel}' == 'Cremation' and '${serviceLabel}' == 'No Facilities' and ${packageCount} != ${expectedCremationNoFacilities}
+                Fail    Package count mismatch for Cremation - No Facilities at Location ID ${locationId}. Expected ${expectedCremationNoFacilities}, but found ${packageCount}.
+            END
+            ${expectedCremationTotal}=    Evaluate    ${expectedCremationNoFacilities} + ${expectedCremationFacilities}
+            IF    '${dispLabel}' == 'Cremation' and '${serviceLabel}' == 'All' and ${packageCount} != ${expectedCremationTotal}
+                Fail    Package count mismatch for Cremation - All at Location ID ${locationId}. Expected ${expectedCremationTotal}, but found ${packageCount}.
+            END
+            
             # Log the full combination
             Log
             ...    Package Combination - Location: ${location} | ${locationId} | Disposition: ${dispLabel} | Service: ${serviceLabel} | Packages: ${packageCount}

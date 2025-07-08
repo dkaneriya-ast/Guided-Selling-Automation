@@ -19,5 +19,5 @@ Run GS for ${locationId}
 
 *** Keywords ***
 Execute Guided Selling Flow for All Combinations
-    [Arguments]    ${url}    ${locationId}
-    Perform Guided Selling Flow    ${url}    ${locationId}
+    [Arguments]    ${url}    ${locationId}    ${expectedDispositionOptions}    ${expectedBurialServiceOptions}    ${expectedBurialFacilities}    ${expectedBurialNoFacilities}    ${expectedCremationServiceOptions}    ${expectedCremationFacilities}    ${expectedCremationNoFacilities}
+    Perform Guided Selling Flow    ${url}    ${locationId}    ${expectedDispositionOptions}    ${expectedBurialServiceOptions}    ${expectedBurialFacilities}    ${expectedBurialNoFacilities}    ${expectedCremationServiceOptions}    ${expectedCremationFacilities}    ${expectedCremationNoFacilities}
