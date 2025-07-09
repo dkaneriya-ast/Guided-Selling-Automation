@@ -128,13 +128,18 @@ Perform Guided Selling Flow
         IF    ${serviceLength} == 0
             Fail    No service method options found for Disposition: ${dispLabel} at Location ID: ${locationId}
         END
-        ${expectedBurialServiceTotalOptions}=    Evaluate    ${expectedBurialServiceOptions} + 1
-        IF    '${dispLabel}' == 'Burial' and ${serviceLength} != ${expectedBurialServiceTotalOptions}
-            Fail    Service count mismatch for Burial at Location ID: ${locationId}. Expected ${expectedBurialServiceTotalOptions}, but found ${serviceLength}.
+        IF    '${dispLabel}' == 'Burial'
+            ${expectedBurialServiceTotalOptions}=    Evaluate    ${expectedBurialServiceOptions} + 1
+            IF     ${serviceLength} != ${expectedBurialServiceTotalOptions}
+                Fail    Service count mismatch for Burial at Location ID: ${locationId}. Expected ${expectedBurialServiceTotalOptions}, but found ${serviceLength}.
+            END
         END
-        ${expectedCremationServiceTotalOptions}=    Evaluate    ${expectedCremationServiceOptions} + 1
-        IF    '${dispLabel}' == 'Cremation' and ${serviceLength} != ${expectedCremationServiceTotalOptions}
-            Fail    Service count mismatch for Cremation at Location ID: ${locationId}. Expected ${expectedCremationServiceTotalOptions}, but found ${serviceLength}.
+        
+        IF    '${dispLabel}' == 'Cremation'
+            ${expectedCremationServiceTotalOptions}=    Evaluate    ${expectedCremationServiceOptions} + 1
+            IF    ${serviceLength} != ${expectedCremationServiceTotalOptions}
+                Fail    Service count mismatch for Cremation at Location ID: ${locationId}. Expected ${expectedCremationServiceTotalOptions}, but found ${serviceLength}.
+            END
         END
 
         FOR    ${serviceIndex}    IN RANGE    ${serviceLength}
@@ -170,7 +175,7 @@ Perform Guided Selling Flow
             END
             ${expectedBurialTotal}=    Evaluate    ${expectedBurialNoFacilities} + ${expectedBurialFacilities}
             IF    '${dispLabel}' == 'Burial' and '${serviceLabel}' == 'All' and ${packageCount} != ${expectedBurialTotal}
-                Fail    Package count mismatch for Burial - All at Location ID ${locationId}. Expected ${expectedBurialNoFacilities}, but found ${packageCount}.
+                Fail    Package count mismatch for Burial - All at Location ID ${locationId}. Expected ${expectedBurialTotal}, but found ${packageCount}.
             END
             IF    '${dispLabel}' == 'Cremation' and '${serviceLabel}' == 'Facilities' and ${packageCount} != ${expectedCremationFacilities}
                 Fail    Package count mismatch for Cremation - Facilities at Location ID ${locationId}. Expected ${expectedCremationFacilities}, but found ${packageCount}.
