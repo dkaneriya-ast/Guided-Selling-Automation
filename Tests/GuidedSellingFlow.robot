@@ -11,13 +11,6 @@ Test Template       Execute Guided Selling Flow for All Combinations
 
 # Run the Script
 # robot -d results Tests/GuidedSellingFlow.robot
-# pabot --processes 2 --testlevelsplit --outputdir Results Tests/GuidedSellingFlow.robot
-
-# Rerun failed: 
-# pabot --processes 2 --outputdir Results/rerun --rerunfailed Results/output.xml Tests/GuidedSellingFlow.robot
-
-#Combine original + rerun results
-# rebot --outputdir Results --output output.xml Results/output.xml Results/rerun/output.xml
 
 *** Test Cases ***
 Run GS for ${locationId}
