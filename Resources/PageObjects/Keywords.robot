@@ -30,6 +30,7 @@ Write Test Results to Excel File
 
 Open Storefront and Reject Cookies
     Go To    ${env}
+    Wait For Condition	return document.readyState == "complete"    timeout=30s
     Wait Until Element Is Visible    ${rejectCookies}    timeout=20s
     Click Element    ${rejectCookies}
     Wait Until Element Is Not Visible    ${rejectCookies}
@@ -61,6 +62,7 @@ Handle Active Plan Found Popup If Present
 Start Guided Selling Until Disposition Step
     [Arguments]    ${url}
     Go To    ${url}
+    Wait For Condition	return document.readyState == "complete"    timeout=30s
     # arrange Online click
     Wait Until Element Is Visible    ${arrangeOnline}    timeout=20s
     Click Element    ${arrangeOnline}
