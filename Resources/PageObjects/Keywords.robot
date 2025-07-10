@@ -6,6 +6,11 @@ Library             String
 Library             ExcelSage
 Library             pabot.PabotLib
 
+*** Variables ***
+
+# keep check whether its first GS Call, so that it can skip the Active Plan Found popup check
+${isFirstGSCall}=    True    
+
 *** Keywords ***
 Initialize Parallel Result Storage
     Set Parallel Value For Key    testResultsGlobal    ${EMPTY}
@@ -23,9 +28,9 @@ Write Test Results to Excel File
     END
     Save WorkBook
 
-Open Storefront and Accept Cookies
+Open Storefront and Reject Cookies
     Go To    ${env}
-    Wait Until Element Is Visible    ${rejectCookies}
+    Wait Until Element Is Visible    ${rejectCookies}    timeout=20s
     Click Element    ${rejectCookies}
     Wait Until Element Is Not Visible    ${rejectCookies}
 
@@ -46,11 +51,18 @@ Get Package Count for Current Selection
     ${count}=    Get Length    ${packages}
     RETURN    ${count}
 
+Handle Active Plan Found Popup If Present
+    ${isPopupPresent}=    Run Keyword And Return Status
+    ...    Wait Until Element Is Visible
+    ...    ${activePlanFoundPopup}
+    ...    timeout=5s
+    IF    '${isPopupPresent}' == 'True'    Click Element    ${startNewCTA}        
+
 Start Guided Selling Until Disposition Step
     [Arguments]    ${url}
     Go To    ${url}
     # arrange Online click
-    Wait Until Element Is Visible    ${arrangeOnline}
+    Wait Until Element Is Visible    ${arrangeOnline}    timeout=20s
     Click Element    ${arrangeOnline}
 
     # start planning inside GS
@@ -58,11 +70,11 @@ Start Guided Selling Until Disposition Step
     Click Element    ${startPlanning}
 
     # check and close active plan popup if present
-    ${isPopupPresent}=    Run Keyword And Return Status
-    ...    Wait Until Element Is Visible
-    ...    ${activePlanFoundPopup}
-    ...    timeout=3s
-    IF    '${isPopupPresent}' == 'True'    Click Element    ${startNewCTA}
+    IF    '${isFirstGSCall}' == 'False'
+        Handle Active Plan Found Popup If Present     
+    ELSE
+        Set Suite Variable    ${isFirstGSCall}    False
+    END        
 
     # choose immediate need
     Wait Until Page Contains Element    ${immediateNeedRadio}
@@ -77,7 +89,7 @@ Start Guided Selling Until Disposition Step
     Wait Until Element Is Visible    ${dateOfPassingLabel}
     Mouse Down    ${dateOfPassingLabel}
     Mouse Up    ${dateOfPassingLabel}
-    Sleep    1s
+    Sleep    1.5s
     Press Keys    ${dateOfPassingInput}    ${dateOfPassing}
     Wait Until Element Is Visible    ${continueCTA}
     Click Element    ${continueCTA}
@@ -98,7 +110,7 @@ Start Guided Selling Until Disposition Step
 
 Perform Guided Selling Flow
     [Arguments]    ${url}    ${locationId}    ${expectedDispositionOptions}    ${expectedBurialServiceOptions}    ${expectedBurialFacilities}    ${expectedBurialNoFacilities}    ${expectedCremationServiceOptions}    ${expectedCremationFacilities}    ${expectedCremationNoFacilities}
-    Open Storefront and Accept Cookies
+    Open Storefront and Reject Cookies
     # Step 1: Get all disposition options
     Start Guided Selling Until Disposition Step    ${url}
     ${location}=    Get Text    ${locationName}
