@@ -47,7 +47,7 @@ Fetch All Service Method Options
     RETURN    @{services}
 
 Get Package Count for Current Selection
-    Wait Until Element Is Visible    ${packageOptions}
+    Wait Until Element Is Visible    ${packageOptions}    timeout=20s
     ${packages}=    Get WebElements    ${packageOptions}
     ${count}=    Get Length    ${packages}
     RETURN    ${count}
@@ -62,9 +62,10 @@ Handle Active Plan Found Popup If Present
 Start Guided Selling Until Disposition Step
     [Arguments]    ${url}
     Go To    ${url}
-    Wait For Condition	return document.readyState == "complete"    timeout=30s
+    # Wait For Condition	return document.readyState == "complete"    timeout=35s
     # arrange Online click
-    Wait Until Element Is Visible    ${arrangeOnline}    timeout=20s
+    Wait Until Keyword Succeeds    40s    2s    Wait Until Element Is Visible    ${arrangeOnline}
+    # Wait Until Element Is Visible    ${arrangeOnline}    timeout=20s
     Click Element    ${arrangeOnline}
 
     # start planning inside GS
@@ -223,6 +224,119 @@ Perform Guided Selling Flow
             END
             Set Parallel Value For Key    testResultsGlobal    ${existing}
             Release Lock    result
+            ${isLastService}=    Evaluate    ${serviceIndex} == ${serviceLength}-1
+            ${isLastDisposition}=    Evaluate    ${dispIndex} == ${dispositionLength}-1
+            IF    not (${isLastService} and ${isLastDisposition})
+                Start Guided Selling Until Disposition Step    ${url}
+            END
+        END
+    END
+
+
+Perform Guided Selling Flow Single
+    [Arguments]    ${url}    ${locationId}    ${expectedDispositionOptions}    ${expectedBurialServiceOptions}    ${expectedBurialFacilities}    ${expectedBurialNoFacilities}    ${expectedCremationServiceOptions}    ${expectedCremationFacilities}    ${expectedCremationNoFacilities}
+    Open Storefront and Reject Cookies
+    # Step 1: Get all disposition options
+    Start Guided Selling Until Disposition Step    ${url}
+    ${location}=    Get Text    ${locationName}
+    @{dispositionOptions}=    Fetch All Disposition Options
+    ${dispositionLength}=    Get Length    ${dispositionOptions}
+
+    IF    ${dispositionLength} == 0
+        Fail    No disposition options found for Location ID: ${locationId}
+    END
+
+    IF    ${dispositionLength} != ${expectedDispositionOptions}
+        Fail    Disposition count mismatch at Location ID: ${locationId}. Expected ${expectedDispositionOptions}, but found ${dispositionLength}.
+    END
+
+    FOR    ${dispIndex}    IN RANGE    ${dispositionLength}
+        @{dispositionOptions}=    Fetch All Disposition Options
+        ${disposition}=    Get From List    ${dispositionOptions}    ${dispIndex}
+        ${dispLabel}=    Get Text    ${disposition}
+        Click Element    ${disposition}
+        Click Element    ${continueCTA}
+
+        # Step 2: Get all service method options
+        @{serviceOptions}=    Fetch All Service Method Options
+        ${serviceLength}=    Get Length    ${serviceOptions}
+        
+        
+        IF    ${serviceLength} == 0
+            Fail    No service method options found for Disposition: ${dispLabel} at Location ID: ${locationId}
+        END
+        IF    '${dispLabel}' == 'Burial'
+            ${expectedBurialServiceTotalOptions}=    Evaluate    ${expectedBurialServiceOptions} + 1
+            IF     ${serviceLength} != ${expectedBurialServiceTotalOptions}
+                Fail    Service count mismatch for Burial at Location ID: ${locationId}. Expected ${expectedBurialServiceTotalOptions}, but found ${serviceLength}.
+            END
+        END
+        
+        IF    '${dispLabel}' == 'Cremation'
+            ${expectedCremationServiceTotalOptions}=    Evaluate    ${expectedCremationServiceOptions} + 1
+            IF    ${serviceLength} != ${expectedCremationServiceTotalOptions}
+                Fail    Service count mismatch for Cremation at Location ID: ${locationId}. Expected ${expectedCremationServiceTotalOptions}, but found ${serviceLength}.
+            END
+        END
+
+        FOR    ${serviceIndex}    IN RANGE    ${serviceLength}
+            IF    ${serviceIndex} != 0
+                @{dispositionOptions}=    Fetch All Disposition Options
+                ${disposition}=    Get From List    ${dispositionOptions}    ${dispIndex}
+                ${dispLabel}=    Get Text    ${disposition}
+                Click Element    ${disposition}
+                Click Element    ${continueCTA}
+            END
+            @{serviceOptions}=    Fetch All Service Method Options
+            ${service}=    Get From List    ${serviceOptions}    ${serviceIndex}
+            ${serviceLabel}=    Get Text    ${service}
+            IF    '${serviceLabel}' == 'A private viewing, service, or celebration at church, funeral home, or other location'
+                ${serviceLabel}=    Set Variable    Facilities
+            ELSE IF    '${serviceLabel}' == 'No formal service. Just the Burial selection' or '${serviceLabel}' == 'No formal service. Just the Cremation selection'
+                ${serviceLabel}=    Set Variable    No Facilities
+            ELSE IF    '${serviceLabel}' == 'I’m not sure yet'
+                ${serviceLabel}=    Set Variable    All
+            END
+            ${service}=    Get WebElement    ${service}
+            Execute Javascript    arguments[0].click();    ARGUMENTS    ${service}
+            # Step 3: Package count
+            ${packageCount}=    Get Package Count for Current Selection
+            IF    ${packageCount} == 0
+                Fail    No packages found for Disposition: ${dispLabel}, Service: ${serviceLabel} at Location ID: ${locationId}
+            END
+            IF    '${dispLabel}' == 'Burial' and '${serviceLabel}' == 'Facilities' and ${packageCount} != ${expectedBurialFacilities}
+               Fail    Package count mismatch for Burial - Facilities at Location ID ${locationId}. Expected ${expectedBurialFacilities}, but found ${packageCount}.
+            END
+            IF    '${dispLabel}' == 'Burial' and '${serviceLabel}' == 'No Facilities' and ${packageCount} != ${expectedBurialNoFacilities}
+                Fail    Package count mismatch for Burial - No Facilities at Location ID ${locationId}. Expected ${expectedBurialNoFacilities}, but found ${packageCount}.
+            END
+            ${expectedBurialTotal}=    Evaluate    ${expectedBurialNoFacilities} + ${expectedBurialFacilities}
+            IF    '${dispLabel}' == 'Burial' and '${serviceLabel}' == 'All' and ${packageCount} != ${expectedBurialTotal}
+                Fail    Package count mismatch for Burial - All at Location ID ${locationId}. Expected ${expectedBurialTotal}, but found ${packageCount}.
+            END
+            IF    '${dispLabel}' == 'Cremation' and '${serviceLabel}' == 'Facilities' and ${packageCount} != ${expectedCremationFacilities}
+                Fail    Package count mismatch for Cremation - Facilities at Location ID ${locationId}. Expected ${expectedCremationFacilities}, but found ${packageCount}.
+            END
+            IF    '${dispLabel}' == 'Cremation' and '${serviceLabel}' == 'No Facilities' and ${packageCount} != ${expectedCremationNoFacilities}
+                Fail    Package count mismatch for Cremation - No Facilities at Location ID ${locationId}. Expected ${expectedCremationNoFacilities}, but found ${packageCount}.
+            END
+            ${expectedCremationTotal}=    Evaluate    ${expectedCremationNoFacilities} + ${expectedCremationFacilities}
+            IF    '${dispLabel}' == 'Cremation' and '${serviceLabel}' == 'All' and ${packageCount} != ${expectedCremationTotal}
+                Fail    Package count mismatch for Cremation - All at Location ID ${locationId}. Expected ${expectedCremationTotal}, but found ${packageCount}.
+            END
+            
+            # Log the full combination
+            Log
+            ...    Package Combination - Location: ${location} | ${locationId} | Disposition: ${dispLabel} | Service: ${serviceLabel} | Packages: ${packageCount}
+            Log To Console
+            ...    Package Combination - Location: ${location} | ${locationId} | Disposition: ${dispLabel} | Service: ${serviceLabel} | Packages: ${packageCount}
+            ${dataRow}=    Catenate
+            ...    SEPARATOR=|
+            ...    ${location}
+            ...    ${locationId}
+            ...    ${dispLabel}
+            ...    ${serviceLabel}
+            ...    ${packageCount}           
             ${isLastService}=    Evaluate    ${serviceIndex} == ${serviceLength}-1
             ${isLastDisposition}=    Evaluate    ${dispIndex} == ${dispositionLength}-1
             IF    not (${isLastService} and ${isLastDisposition})
