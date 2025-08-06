@@ -1,6 +1,6 @@
 *** Variables ***
-${dev}=     https://storefront:fpg2022@development.afterall.com
-${stg}=     https://storefront:fpg2022@staging.afterall.com
-${prod}=    https://afterall.com
+${dev}=     https://storefront:fpg2022@development.altogetherfuneral.com
+${stg}=     https://storefront:fpg2022@staging.altogetherfuneral.com
+${prod}=    https://altogetherfuneral.com
 
 ${env}=     ${stg}

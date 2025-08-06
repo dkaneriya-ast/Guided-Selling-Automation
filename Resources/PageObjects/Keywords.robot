@@ -5,6 +5,7 @@ Library             Collections
 Library             String
 Library             ExcelSage
 Library             pabot.PabotLib
+Library             OperatingSystem
 
 *** Variables ***
 
@@ -18,15 +19,43 @@ Initialize Parallel Result Storage
 Write Test Results to Excel File
     ${testResults}=    Get Parallel Value For Key    testResultsGlobal
     @{testResults}=    Split String    ${testResults}    separator=\n
-    Create Workbook    Results/results.xlsx    overwrite=True
-    Insert Row    row_index=1    row_data=${rowHeader}
-    ${row}=    Set Variable    2
+    
+    ${projectRootPath}=    Normalize Path    ${CURDIR}/../..
+    ${resultsExcelFile}=    Set Variable    ${projectRootPath}${/}Results${/}results.xlsx
+    ${fileExists}=    Run Keyword And Return Status    File Should Exist    ${resultsExcelFile}
+    IF    ${fileExists}
+        Open Workbook    ${resultsExcelFile}
+        ${rowCount}=    Get Row Count     include_header=True
+        Log To Console    Total Rows: ${rowCount}
+        Log    Total Rows: ${rowCount}
+        ${row}=    Evaluate    ${rowCount} + 1
+        Log To Console    Next Row: ${row}
+        Log    Next Row: ${row}
+    ELSE
+        Create Workbook    ${resultsExcelFile}    overwrite=True
+        Insert Row    row_index=1    row_data=${rowHeader}
+        ${row}=    Set Variable    2
+    END
     FOR    ${rowData}    IN    @{testResults}
         ${cols}=    Split String    ${rowData}    separator=|
         Insert Row    row_index=${row}    row_data=${cols}
         ${row}=    Evaluate    ${row} + 1
     END
     Save WorkBook
+    Close Workbook
+
+
+
+
+    # Create Workbook    Results/results.xlsx    overwrite=True
+    # Insert Row    row_index=1    row_data=${rowHeader}
+    # ${row}=    Set Variable    2
+    # FOR    ${rowData}    IN    @{testResults}
+    #     ${cols}=    Split String    ${rowData}    separator=|
+    #     Insert Row    row_index=${row}    row_data=${cols}
+    #     ${row}=    Evaluate    ${row} + 1
+    # END
+    # Save WorkBook
 
 Open Storefront and Reject Cookies
     Go To    ${env}
