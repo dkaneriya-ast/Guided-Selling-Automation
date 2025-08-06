@@ -14,7 +14,7 @@ Test Template       Execute Guided Selling Flow for All Combinations
 # pabot --processes 6 --testlevelsplit --outputdir Results Tests/GuidedSellingFlow.robot
 
 *** Test Cases ***
-Run GS for ${locationId}
+Run GS for all Locations
 
 *** Keywords ***
 Execute Guided Selling Flow for All Combinations
