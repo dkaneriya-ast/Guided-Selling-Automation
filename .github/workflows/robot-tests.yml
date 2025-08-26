@@ -23,16 +23,19 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: "3.10"
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          
+
       - name: Detect CPU cores
         id: cpu
-        run: echo "cores=$(nproc)" >> $GITHUB_OUTPUT
+        run: |
+          cores=$(nproc)
+          echo "Detected CPU cores: $cores"
+          echo "cores=$cores" >> $GITHUB_OUTPUT
 
       - name: Run Robot tests with pabot
         id: run_tests
@@ -41,12 +44,20 @@ jobs:
           set +e
           pabot --processes ${{ steps.cpu.outputs.cores }} --testlevelsplit \
             --outputdir Results ${{ github.event.inputs.suite }}
-          echo "exit_code=$?" >> $GITHUB_OUTPUT
+          exit_code=$?
+          echo "Robot test run exit code: $exit_code"
+          echo "exit_code=$exit_code" >> $GITHUB_OUTPUT
           set -e
+        continue-on-error: true
 
       - name: Rerun failed tests (if any)
         if: ${{ steps.run_tests.outputs.exit_code != '0' && github.event.inputs.rerun == 'true' }}
         run: |
+          echo "🔁 Rerunning failed tests..."
+          if [ ! -f "$GITHUB_WORKSPACE/Results/output.xml" ]; then
+            echo "❌ output.xml not found, cannot rerun."
+            exit 0
+          fi
           mkdir -p Results/rerun
           pabot --processes ${{ steps.cpu.outputs.cores }} --testlevelsplit \
             --prerunmodifier DataDriver.rerunfailed:$GITHUB_WORKSPACE/Results/output.xml \
@@ -56,14 +67,24 @@ jobs:
             --report rerun_report.html \
             ${{ github.event.inputs.suite }} || true
 
-      - name: Merge rerun results
+      - name: Merge results (original + rerun if exists)
         if: always()
         run: |
-          rebot --outputdir Results \
-            --log merged_log.html \
-            --report merged_report.html \
-            --output merged_output.xml \
-            --merge Results/output.xml Results/rerun/rerun.xml || true
+          if [ -f Results/rerun/rerun.xml ]; then
+            echo "Merging original and rerun results..."
+            rebot --outputdir Results \
+              --log merged_log.html \
+              --report merged_report.html \
+              --output merged_output.xml \
+              --merge Results/output.xml Results/rerun/rerun.xml
+          else
+            echo "No rerun results found, using original output only."
+            rebot --outputdir Results \
+              --log merged_log.html \
+              --report merged_report.html \
+              --output merged_output.xml \
+              Results/output.xml
+          fi
 
       - name: Upload Robot Results
         if: always()
