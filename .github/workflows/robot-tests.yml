@@ -43,25 +43,32 @@ jobs:
           rm -f Results/results.xlsx
           set +e
           pabot --processes ${{ steps.cpu.outputs.cores }} --testlevelsplit \
-            --outputdir Results ${{ github.event.inputs.suite }}
+            --outputdir "$ROBOT_WORKSPACE/Results" ${{ github.event.inputs.suite }}
           exit_code=$?
           echo "Robot test run exit code: $exit_code"
           echo "exit_code=$exit_code" >> $GITHUB_OUTPUT
           set -e
         continue-on-error: true
+        
+      - name: Merge Pabot outputs for rerun
+        if: ${{ steps.run_tests.outputs.exit_code != '0' && github.event.inputs.rerun == 'true' }}
+        run: |
+          echo "Merging Pabot outputs for rerun..."
+          rebot --outputdir "$ROBOT_WORKSPACE/Results" \
+            --output merged_for_rerun.xml "$ROBOT_WORKSPACE/Results/output*.xml"
 
       - name: Rerun failed tests (if any)
         if: ${{ steps.run_tests.outputs.exit_code != '0' && github.event.inputs.rerun == 'true' }}
         run: |
           echo "🔁 Rerunning failed tests..."
-          if [ ! -f "$GITHUB_WORKSPACE/Results/output.xml" ]; then
-            echo "❌ output.xml not found, cannot rerun."
+          if [ ! -f "$ROBOT_WORKSPACE/Results/merged_for_rerun.xml" ]; then
+            echo "❌ merged_for_rerun.xml not found, cannot rerun."
             exit 0
           fi
-          mkdir -p Results/rerun
-          pabot --processes ${{ steps.cpu.outputs.cores }} --testlevelsplit \
-            --prerunmodifier DataDriver.rerunfailed:$GITHUB_WORKSPACE/Results/output.xml \
-            --outputdir Results/rerun \
+          mkdir -p "$ROBOT_WORKSPACE/Results/rerun"
+          pabot --processes 1 \
+            --prerunmodifier DataDriver.rerunfailed:"$ROBOT_WORKSPACE/Results/merged_for_rerun.xml" \
+            --outputdir "$ROBOT_WORKSPACE/Results/rerun" \
             --output rerun.xml \
             --log rerun_log.html \
             --report rerun_report.html \
@@ -70,20 +77,13 @@ jobs:
       - name: Merge results (original + rerun if exists)
         if: always()
         run: |
-          if [ -f Results/rerun/rerun.xml ]; then
+          if [ -f "$ROBOT_WORKSPACE/Results/rerun/rerun.xml" ]; then
             echo "Merging original and rerun results..."
-            rebot --outputdir Results \
-              --log merged_log.html \
-              --report merged_report.html \
-              --output merged_output.xml \
-              --merge Results/output.xml Results/rerun/rerun.xml
-          else
-            echo "No rerun results found, using original output only."
-            rebot --outputdir Results \
-              --log merged_log.html \
-              --report merged_report.html \
-              --output merged_output.xml \
-              Results/output.xml
+            rebot --outputdir "$ROBOT_WORKSPACE/Results" \
+              --log "$ROBOT_WORKSPACE/Results/merged_log.html" \
+              --report "$ROBOT_WORKSPACE/Results/merged_report.html" \
+              --output "$ROBOT_WORKSPACE/Results/merged_output.xml" \
+              --merge "$ROBOT_WORKSPACE/Results/output.xml" "$ROBOT_WORKSPACE/Results/rerun/rerun.xml"
           fi
 
       - name: Upload Robot Results
