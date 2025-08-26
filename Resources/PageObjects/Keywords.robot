@@ -1,5 +1,5 @@
 *** Settings ***
-Resource            ../Resources/Common.robot
+Resource            ../Common.robot
 Resource            Locators.robot
 Library             Collections
 Library             String
