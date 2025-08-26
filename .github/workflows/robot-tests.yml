@@ -76,7 +76,7 @@ jobs:
             exit 0
           fi
           mkdir -p "$ROBOT_WORKSPACE/Results/rerun"
-          pabot --processes 1 \
+          pabot --processes ${{ steps.cpu.outputs.cores }} --testlevelsplit \
             --prerunmodifier DataDriver.rerunfailed:"$ROBOT_WORKSPACE/Results/merged_for_rerun.xml" \
             --outputdir "$ROBOT_WORKSPACE/Results/rerun" \
             --output rerun.xml \
