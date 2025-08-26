@@ -6,6 +6,7 @@ Library             String
 Library             ExcelSage
 Library             pabot.PabotLib
 Library             OperatingSystem
+Library             ../../CustomLibrary/RemoveDuplicateRows.py
 
 *** Variables ***
 
@@ -42,6 +43,7 @@ Write Test Results to Excel File
         ${row}=    Evaluate    ${row} + 1
     END
     Save WorkBook
+    Remove Duplicate Rows    file_path=${resultsExcelFile}    columns=${rowHeader}
     Close Workbook
 
 
