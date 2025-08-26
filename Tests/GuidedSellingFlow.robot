@@ -1,5 +1,6 @@
 *** Settings ***
 Resource            ../Resources/PageObjects/Keywords.robot
+Resource            ../Resources/Common.robot
 Library             DataDriver    file=../Data/locations.xlsx
 
 Suite Setup         Run Setup Only Once    Initialize Parallel Result Storage
