@@ -59,25 +59,17 @@ jobs:
           echo "exit_code from run_tests: ${{ steps.run_tests.outputs.exit_code }}"
           echo "rerun input: ${{ github.event.inputs.rerun }}"
 
-      - name: Merge Pabot outputs for rerun
-        if: ${{ steps.run_tests.outputs.exit_code != '0' && github.event.inputs.rerun == 'true' }}
-        continue-on-error: true
-        run: |
-          echo "Merging Pabot outputs for rerun..."
-          rebot --outputdir "$ROBOT_WORKSPACE/Results" \
-            --output merged_for_rerun.xml $ROBOT_WORKSPACE/Results/output*.xml
-
       - name: Rerun failed tests (if any)
         if: ${{ steps.run_tests.outputs.exit_code != '0' && github.event.inputs.rerun == 'true' }}
         run: |
           echo "🔁 Rerunning failed tests..."
-          if [ ! -f "$ROBOT_WORKSPACE/Results/merged_for_rerun.xml" ]; then
-            echo "❌ merged_for_rerun.xml not found, cannot rerun."
+          if [ ! -f "$ROBOT_WORKSPACE/Results/output.xml" ]; then
+            echo "❌ output.xml not found, cannot rerun."
             exit 0
           fi
           mkdir -p "$ROBOT_WORKSPACE/Results/rerun"
           pabot --processes ${{ steps.cpu.outputs.cores }} --testlevelsplit \
-            --prerunmodifier DataDriver.rerunfailed:"$ROBOT_WORKSPACE/Results/merged_for_rerun.xml" \
+            --prerunmodifier DataDriver.rerunfailed:"$ROBOT_WORKSPACE/Results/output.xml" \
             --outputdir "$ROBOT_WORKSPACE/Results/rerun" \
             --output rerun.xml \
             --log rerun_log.html \
