@@ -65,7 +65,7 @@ jobs:
         run: |
           echo "Merging Pabot outputs for rerun..."
           rebot --outputdir "$ROBOT_WORKSPACE/Results" \
-            --output merged_for_rerun.xml "$ROBOT_WORKSPACE/Results/output*.xml"
+            --output merged_for_rerun.xml $ROBOT_WORKSPACE/Results/output*.xml
 
       - name: Rerun failed tests (if any)
         if: ${{ steps.run_tests.outputs.exit_code != '0' && github.event.inputs.rerun == 'true' }}
