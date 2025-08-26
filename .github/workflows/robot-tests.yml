@@ -50,14 +50,18 @@ jobs:
           set +e
           pabot --processes ${{ steps.cpu.outputs.cores }} --testlevelsplit \
             --outputdir "$ROBOT_WORKSPACE/Results" ${{ github.event.inputs.suite }}
-          exit_code=$?
-          echo "Robot test run exit code: $exit_code"
-          echo "exit_code=$exit_code" >> $GITHUB_OUTPUT
+          echo "exit_code=$?" >> $GITHUB_OUTPUT
           set -e
         continue-on-error: true
 
+      - name: Debug outputs
+        run: |
+          echo "exit_code from run_tests: ${{ steps.run_tests.outputs.exit_code }}"
+          echo "rerun input: ${{ github.event.inputs.rerun }}"
+
       - name: Merge Pabot outputs for rerun
         if: ${{ steps.run_tests.outputs.exit_code != '0' && github.event.inputs.rerun == 'true' }}
+        continue-on-error: true
         run: |
           echo "Merging Pabot outputs for rerun..."
           rebot --outputdir "$ROBOT_WORKSPACE/Results" \
@@ -82,6 +86,7 @@ jobs:
 
       - name: Merge results (original + rerun if exists)
         if: always()
+        continue-on-error: true
         run: |
           if [ -f "$ROBOT_WORKSPACE/Results/rerun/rerun.xml" ]; then
             echo "Merging original and rerun results..."
