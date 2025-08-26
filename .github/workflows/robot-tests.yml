@@ -7,17 +7,14 @@ on:
         description: "Robot test suite to run (e.g., Tests/GuidedSellingFlow.robot)"
         required: true
         default: "Tests/GuidedSellingFlow.robot"
-        type: string
       processes:
         description: "Number of parallel processes"
         required: true
         default: "6"
-        type: number
       rerun:
-        description: "Rerun failed tests?"
-        required: true
-        default: true
-        type: boolean
+        description: "Rerun failed tests? (true/false)"
+        required: false
+        default: "true"
 
 jobs:
   test:
@@ -25,29 +22,31 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          # If your repo has a requirements.txt, keep this:
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          pip install robotframework robotframework-pabot robotframework-datadriver
+          pip install -r requirements.txt
+          pip install robotframework-pabot robotframework-datadriver
 
       - name: Run Robot tests with pabot
+        id: run_tests
         run: |
           rm -f Results/results.xlsx
-          mkdir -p Results
+          set +e
           pabot --processes ${{ inputs.processes }} --testlevelsplit \
-            --outputdir Results ${{ inputs.suite }} || echo "Tests failed"
+            --outputdir Results ${{ inputs.suite }}
+          echo "exit_code=$?" >> $GITHUB_OUTPUT
+          set -e
 
       - name: Rerun failed tests (if any)
-        if: ${{ failure() && inputs.rerun == true }}
+        if: ${{ steps.run_tests.outputs.exit_code != '0' && inputs.rerun == 'true' }}
         run: |
           mkdir -p Results/rerun
           pabot --processes ${{ inputs.processes }} --testlevelsplit \
@@ -58,38 +57,18 @@ jobs:
             --report rerun_report.html \
             ${{ inputs.suite }} || true
 
-      - name: Merge results (first run + rerun)
+      - name: Merge rerun results
         if: always()
         run: |
-          # If rerun didn't happen, rerun file may not exist; rebot handles missing files poorly.
-          if [ -f Results/rerun/rerun.xml ]; then
-            rebot --outputdir Results \
-              --log merged_log.html \
-              --report merged_report.html \
-              --output merged_output.xml \
-              --merge Results/output.xml Results/rerun/rerun.xml || true
-          else
-            # No rerun; just rename the originals as "merged_*" for consistency
-            cp Results/output.xml Results/merged_output.xml || true
-            cp Results/log.html Results/merged_log.html || true
-            cp Results/report.html Results/merged_report.html || true
-          fi
+          rebot --outputdir Results \
+            --log merged_log.html \
+            --report merged_report.html \
+            --output merged_output.xml \
+            --merge Results/output.xml Results/rerun/rerun.xml || true
 
-      - name: Upload Robot results (artifacts)
+      - name: Upload Robot Results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: robot-results
           path: Results/
-          if-no-files-found: warn
-          retention-days: 7
-
-      - name: Add quick link to artifacts in summary
-        if: always()
-        run: |
-          {
-            echo "## 📊 Robot Framework Test Results"
-            echo ""
-            echo "Artifacts (logs & reports) for this run:"
-            echo "- [Open Artifacts for this run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)"
-          } >> "$GITHUB_STEP_SUMMARY"
