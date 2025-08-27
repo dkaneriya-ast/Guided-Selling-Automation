@@ -83,7 +83,7 @@ jobs:
           mkdir -p "$ROBOT_WORKSPACE/Results/rerun"
           pabot --processes ${{ steps.cpu.outputs.cores }} --testlevelsplit \
             --variable env:${{ github.event.inputs.env }} \
-            ---prerunmodifier DataDriver.rerunfailed:"$ROBOT_WORKSPACE/Results/merged_for_rerun.xml" \
+            --prerunmodifier DataDriver.rerunfailed:"$ROBOT_WORKSPACE/Results/merged_for_rerun.xml" \
             --outputdir "$ROBOT_WORKSPACE/Results/rerun" \
             --output rerun.xml \
             --log rerun_log.html \
@@ -100,7 +100,7 @@ jobs:
               --log "$ROBOT_WORKSPACE/Results/merged_log.html" \
               --report "$ROBOT_WORKSPACE/Results/merged_report.html" \
               --output "$ROBOT_WORKSPACE/Results/merged_output.xml" \
-              --merge "$ROBOT_WORKSPACE/Results/output.xml" "$ROBOT_WORKSPACE/Results/rerun/rerun.xml"
+              --merge "$ROBOT_WORKSPACE/Results/merged_for_rerun.xml" "$ROBOT_WORKSPACE/Results/rerun/rerun.xml"
           fi
 
       - name: Upload Robot Results
