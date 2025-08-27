@@ -75,7 +75,7 @@ jobs:
           mkdir -p "$ROBOT_WORKSPACE/Results/rerun"
           pabot --processes ${{ steps.cpu.outputs.cores }} --testlevelsplit \
             --variable env:${{ github.event.inputs.env }} \
-            --prerunmodifier DataDriver.rerunfailed:"$ROBOT_WORKSPACE/Results/output.xml" \
+            --prerunmodifier --rerunfailed "$ROBOT_WORKSPACE/Results/output.xml" \
             --outputdir "$ROBOT_WORKSPACE/Results/rerun" \
             --output rerun.xml \
             --log rerun_log.html \
