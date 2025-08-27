@@ -12,9 +12,9 @@ on:
         required: false
         default: "true"
       env:
-        description: "Environment to run against (dev/stg/prod)"
+        description: "Environment to run against (${dev}, ${stg}, ${prod})"
         required: true
-        default: "stg"  
+        default: "${stg}"
 
 jobs:
   test:
