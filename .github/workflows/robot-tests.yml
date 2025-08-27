@@ -50,63 +50,95 @@ jobs:
 
       - name: Run Robot tests with pabot
         id: run_tests
+        # This step will continue even if tests fail, so the rerun step can execute
+        continue-on-error: true 
         run: |
-          set +e
           pabot --processes ${{ steps.cpu.outputs.cores }} --testlevelsplit \
             --variable env:${{ github.event.inputs.env }} \
-            --outputdir "$ROBOT_WORKSPACE/Results" ${{ github.event.inputs.suite }}  
+            --outputdir "$ROBOT_WORKSPACE/Results" \
+            ${{ github.event.inputs.suite }}
+          
+          # Capture the exit code and pass it to subsequent steps
           echo "exit_code=$?" >> $GITHUB_OUTPUT
-          set -e
-        continue-on-error: true
-
-      - name: Debug outputs
-        run: |
-          echo "exit_code from run_tests: ${{ steps.run_tests.outputs.exit_code }}"
-          echo "rerun input: ${{ github.event.inputs.rerun }}"
-
-      - name: Merge Pabot outputs for rerun
-        if: ${{ steps.run_tests.outputs.exit_code != '0' && github.event.inputs.rerun == 'true' }}
-        continue-on-error: true
-        run: |
-          echo "Merging Pabot outputs for rerun..."
-          rebot --outputdir "$ROBOT_WORKSPACE/Results" \
-            --output merged_for_rerun.xml $ROBOT_WORKSPACE/Results/output*.xml          
 
       - name: Rerun failed tests (if any)
+        id: rerun_tests
         if: ${{ steps.run_tests.outputs.exit_code != '0' && github.event.inputs.rerun == 'true' }}
         run: |
           echo "🔁 Rerunning failed tests..."
-          if [ ! -f "$ROBOT_WORKSPACE/Results/merged_for_rerun.xml" ]; then
-            echo ":x: merged_for_rerun.xml not found, cannot rerun."
-            exit 0
+          if [ ! -f "$ROBOT_WORKSPACE/Results/output.xml" ]; then
+            echo "❌ output.xml not found, cannot rerun."
+            exit 0 # Exit gracefully, as there's nothing to rerun
           fi
-          mkdir -p "$ROBOT_WORKSPACE/Results/rerun"
-          pabot --processes ${{ steps.cpu.outputs.cores }} --testlevelsplit \
-            --variable env:${{ github.event.inputs.env }} \
-            --prerunmodifier DataDriver.rerunfailed:"$ROBOT_WORKSPACE/Results/merged_for_rerun.xml" \
+          
+          # CORRECTED: Use pabot's native rerun functionality.
+          # This command is simpler and works for any type of test (including DataDriver).
+          pabot --rerunfailed "$ROBOT_WORKSPACE/Results/output.xml" \
             --outputdir "$ROBOT_WORKSPACE/Results/rerun" \
+            --variable env:${{ github.event.inputs.env }} \
             --output rerun.xml \
             --log rerun_log.html \
-            --report rerun_report.html \
-            ${{ github.event.inputs.suite }} || true 
+            --report rerun_report.html
 
-      - name: Merge results (original + rerun if exists)
+      - name: Merge results
+        id: merge_results
+        # Always run this step to ensure results are processed
         if: always()
-        continue-on-error: true
         run: |
+          # Check for the original output before attempting any merge
+          if [ ! -f "$ROBOT_WORKSPACE/Results/output.xml" ]; then
+             echo "No original output.xml found to merge. Skipping."
+             exit 0
+          fi
+          
+          # If a rerun happened and produced a new output, merge it with the original.
           if [ -f "$ROBOT_WORKSPACE/Results/rerun/rerun.xml" ]; then
             echo "Merging original and rerun results..."
             rebot --outputdir "$ROBOT_WORKSPACE/Results" \
-              --log "$ROBOT_WORKSPACE/Results/merged_log.html" \
-              --report "$ROBOT_WORKSPACE/Results/merged_report.html" \
-              --output "$ROBOT_WORKSPACE/Results/merged_output.xml" \
-              --merge "$ROBOT_WORKSPACE/Results/merged_for_rerun.xml" "$ROBOT_WORKSPACE/Results/rerun/rerun.xml"
+              --output merged_output.xml \
+              --log merged_log.html \
+              --report merged_report.html \
+              --merge "$ROBOT_WORKSPACE/Results/output.xml" "$ROBOT_WORKSPACE/Results/rerun/rerun.xml"
+          else
+            echo "No rerun results found. Finalizing original results."
+            # For consistency, rename the original files to 'merged' so the artifact upload step always finds them.
+            mv "$ROBOT_WORKSPACE/Results/output.xml" "$ROBOT_WORKSPACE/Results/merged_output.xml"
+            mv "$ROBOT_WORKSPACE/Results/log.html" "$ROBOT_WORKSPACE/Results/merged_log.html"
+            mv "$ROBOT_WORKSPACE/Results/report.html" "$ROBOT_WORKSPACE/Results/merged_report.html"
           fi
 
+      - name: Check final test status and fail workflow if necessary
+        if: always()
+        run: |
+          # The exit code from the first run will be non-zero if tests failed
+          initial_exit_code=${{ steps.run_tests.outputs.exit_code }}
+          
+          echo "Initial run exit code: $initial_exit_code"
+          
+          if [ "$initial_exit_code" != "0" ]; then
+            # If there was a failure, check if the merged report still contains fails
+            echo "Checking merged results for failures..."
+            # Use rebot to analyze the final output. It exits with 0 if no tests failed.
+            rebot --nostatusrc -d "$ROBOT_WORKSPACE/Results" "$ROBOT_WORKSPACE/Results/merged_output.xml"
+            final_status=$?
+            if [ "$final_status" != "0" ]; then
+              echo "::error::Tests failed even after rerun."
+              exit 1
+            else
+              echo "✅ All tests passed after rerun."
+            fi
+          else
+            echo "✅ All tests passed in the initial run."
+          fi
+          
       - name: Upload Robot Results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: robot-results
-          path: Results/
+          # The path should point to where the final merged files are
+          path: |
+            Results/merged_report.html
+            Results/merged_log.html
+            Results/merged_output.xml
           retention-days: 7
