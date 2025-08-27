@@ -49,7 +49,6 @@ jobs:
       - name: Prepare Results folder
         run: |
           mkdir -p "$GITHUB_WORKSPACE/Results"
-          rm -f "$GITHUB_WORKSPACE/Results/"*.xml
           rm -f "$GITHUB_WORKSPACE/Results/results.xlsx"
           
       - name: Run Robot tests with pabot
@@ -64,12 +63,13 @@ jobs:
       - name: Check for failures and set job output
         id: check_failures
         run: |
-          if ! rebot --nostatusrc Results/output.xml; then
-            echo "Initial run has failures."
-            echo "status=failed" >> $GITHUB_OUTPUT
-          else
+          # Ensure this step never fails, always sets status
+          if rebot --nostatusrc Results/output.xml; then
             echo "Initial run passed."
             echo "status=passed" >> $GITHUB_OUTPUT
+          else
+            echo "Initial run has failures."
+            echo "status=failed" >> $GITHUB_OUTPUT
           fi
 
       - name: Upload original results artifact
@@ -86,7 +86,8 @@ jobs:
   rerun-failed:
     runs-on: ubuntu-latest
     needs: initial-run
-    if: needs.initial-run.outputs.status == 'failed' && github.event.inputs.rerun == 'true'
+    # safer condition: rerun unless explicitly "false"
+    if: needs.initial-run.outputs.status == 'failed' && github.event.inputs.rerun != 'false'
 
     steps:
       - name: Checkout repository
