@@ -11,6 +11,10 @@ on:
         description: "Rerun failed tests? (true/false)"
         required: false
         default: "true"
+      env:
+        description: "Environment to run against (dev/stg/prod)"
+        required: true
+        default: "dev"        
 
 jobs:
   test:
@@ -49,6 +53,7 @@ jobs:
         run: |
           set +e
           pabot --processes ${{ steps.cpu.outputs.cores }} --testlevelsplit \
+            --variable env:${{ github.event.inputs.env }} \
             --outputdir "$ROBOT_WORKSPACE/Results" ${{ github.event.inputs.suite }}
           echo "exit_code=$?" >> $GITHUB_OUTPUT
           set -e
@@ -69,6 +74,7 @@ jobs:
           fi
           mkdir -p "$ROBOT_WORKSPACE/Results/rerun"
           pabot --processes ${{ steps.cpu.outputs.cores }} --testlevelsplit \
+            --variable env:${{ github.event.inputs.env }} \
             --prerunmodifier DataDriver.rerunfailed:"$ROBOT_WORKSPACE/Results/output.xml" \
             --outputdir "$ROBOT_WORKSPACE/Results/rerun" \
             --output rerun.xml \
