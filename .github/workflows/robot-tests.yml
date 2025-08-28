@@ -19,9 +19,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    env:
-      ROBOT_WORKSPACE: ${{ github.workspace }}
-
+    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -35,7 +33,6 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-
       - name: Detect CPU cores
         id: cpu
         run: |
@@ -45,58 +42,53 @@ jobs:
 
       - name: Prepare Results folder
         run: |
-          rm -rf "$ROBOT_WORKSPACE/Results"
-          mkdir -p "$ROBOT_WORKSPACE/Results"
+          rm -rf "Results"
+          mkdir -p "Results"
 
       - name: Run Robot tests with pabot
         id: run_tests
         run: |
-          set +e
           pabot --processes ${{ steps.cpu.outputs.cores }} --testlevelsplit \
             --variable env:${{ github.event.inputs.env }} \
-            --outputdir "$ROBOT_WORKSPACE/Results" ${{ github.event.inputs.suite }}
+            --outputdir "Results" ${{ github.event.inputs.suite }}
           echo "exit_code=$?" >> $GITHUB_OUTPUT
-          set -e
         continue-on-error: true
 
       - name: Debug outputs
         run: |
           echo "exit_code from run_tests: ${{ steps.run_tests.outputs.exit_code }}"
           echo "rerun input: ${{ github.event.inputs.rerun }}"
-
+          
       - name: Rerun failed tests (if any)
         if: ${{ steps.run_tests.outputs.exit_code != '0' && github.event.inputs.rerun == 'true' }}
         run: |
           echo "🔁 Rerunning failed tests..."
-          if [ ! -f "$ROBOT_WORKSPACE/Results/output.xml" ]; then
+          if [ ! -f "Results/output.xml" ]; then
             echo "❌ output.xml not found, cannot rerun."
             exit 0
           fi
-          mkdir -p "$ROBOT_WORKSPACE/Results/rerun"
+          mkdir -p "Results/rerun"
           pabot --processes ${{ steps.cpu.outputs.cores }} --testlevelsplit \
             --variable env:${{ github.event.inputs.env }} \
-            --prerunmodifier DataDriver.rerunfailed:"$ROBOT_WORKSPACE/Results/output.xml" \
-            --outputdir "$ROBOT_WORKSPACE/Results/rerun" \
+            --prerunmodifier DataDriver.rerunfailed:"Results/output.xml" \
+            --outputdir "Results/rerun" \
             --output rerun.xml \
             --log rerun_log.html \
             --report rerun_report.html \
             ${{ github.event.inputs.suite }} || true
 
       - name: Merge results (original + rerun if exists)
-        if: always()
         continue-on-error: true
         run: |
-          if [ -f "$ROBOT_WORKSPACE/Results/rerun/rerun.xml" ]; then
+          if [ -f "Results/rerun/rerun.xml" ]; then
             echo "Merging original and rerun results..."
-            rebot --outputdir "$ROBOT_WORKSPACE/Results" \
-              --log "$ROBOT_WORKSPACE/Results/merged_log.html" \
-              --report "$ROBOT_WORKSPACE/Results/merged_report.html" \
-              --output "$ROBOT_WORKSPACE/Results/merged_output.xml" \
-              --merge "$ROBOT_WORKSPACE/Results/output.xml" "$ROBOT_WORKSPACE/Results/rerun/rerun.xml"              
+            rebot --outputdir "Results" \
+              --log "Results/merged_log.html" \
+              --report "Results/merged_report.html" \
+              --output "Results/merged_output.xml" \
+              --merge "Results/output.xml" "Results/rerun/rerun.xml"              
           fi
-
       - name: Upload Robot Results
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: robot-results
