@@ -34,47 +34,45 @@ jobs:
         id: cpu
         run: |
           cores=$(nproc)
-          echo "Detected CPU cores: $cores"
           echo "cores=$cores" >> $GITHUB_OUTPUT
 
-      - name: Run tests with rerun logic
+      - name: Run initial Robot tests
         run: |
           echo "▶️ Running initial pabot tests..."
-          if ! pabot --processes ${{ steps.cpu.outputs.cores }} --testlevelsplit \
-              --variable env:${{ github.event.inputs.env }} \
-              --outputdir Results \
-              Tests/GuidedSellingFlow.robot; then
-              
-              if [[ "${{ github.event.inputs.rerun }}" == "true" && -f Results/output.xml ]]; then
-                  mkdir -p Results Results/rerun
-                  echo "🔁 Initial run failed — rerunning failed tests..."
-                  pabot --processes ${{ steps.cpu.outputs.cores }} --testlevelsplit \
-                      --variable env:${{ github.event.inputs.env }} \
-                      --prerunmodifier DataDriver.rerunfailed:Results/output.xml \
-                      --outputdir Results/rerun \
-                      --output rerun.xml \
-                      --log rerun_log.html \
-                      --report rerun_report.html \
-                      Tests/GuidedSellingFlow.robot || true
+          pabot --processes ${{ steps.cpu.outputs.cores }} --testlevelsplit \
+                --variable env:${{ github.event.inputs.env }} \
+                --outputdir Results \
+                Tests/GuidedSellingFlow.robot || echo "INITIAL_FAILED=true" >> $GITHUB_ENV
 
-                  if [ -f Results/rerun/rerun.xml ]; then
-                      echo "📊 Merging results..."
-                      rebot --outputdir Results \
-                          --log Results/merged_log.html \
-                          --report Results/merged_report.html \
-                          --output Results/merged_output.xml \
-                          --merge Results/output.xml Results/rerun/rerun.xml
-                  else
-                      echo "⚠️ No rerun.xml produced. Skipping merge."
-                  fi
-              else
-                  echo "⚠️ Rerun disabled or output.xml missing. Skipping rerun."
-              fi
+      - name: Rerun failed tests (if any)
+        if: ${{ env.INITIAL_FAILED == 'true' && github.event.inputs.rerun == 'true' }}
+        run: |
+          echo "🔁 Rerunning failed tests..."
+          mkdir -p Results/rerun
+
+          pabot --processes ${{ steps.cpu.outputs.cores }} --testlevelsplit \
+                --variable env:${{ github.event.inputs.env }} \
+                --prerunmodifier DataDriver.rerunfailed:Results/output.xml \
+                --outputdir Results/rerun \
+                --output rerun.xml \
+                --log rerun_log.html \
+                --report rerun_report.html \
+                --runemptysuite \
+                Tests/GuidedSellingFlow.robot || true
+
+          if [ -f Results/rerun/rerun.xml ]; then
+              echo "📊 Merging results..."
+              rebot --outputdir Results \
+                    --log Results/merged_log.html \
+                    --report Results/merged_report.html \
+                    --output Results/merged_output.xml \
+                    --merge Results/output.xml Results/rerun/rerun.xml
+          else
+              echo "⚠️ No rerun.xml produced. Skipping merge."
           fi
 
-          echo "✅ Script execution completed"
-
       - name: Upload Robot Results
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: robot-results
