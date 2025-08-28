@@ -7,19 +7,19 @@ on:
         description: "Robot test suite to run (e.g., Tests/GuidedSellingFlow.robot)"
         required: true
         default: "Tests/GuidedSellingFlow.robot"
-      rerun:
-        description: "Rerun failed tests? (true/false)"
-        required: false
-        default: "true"
       env:
         description: "Environment to run against (dev/stg/prod)"
         required: true
-        default: "dev"        
+        default: "dev"
+      rerun:
+        description: "Enable rerun of failed tests? (true/false)"
+        required: false
+        default: "true"
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -33,6 +33,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+
       - name: Detect CPU cores
         id: cpu
         run: |
@@ -40,56 +41,43 @@ jobs:
           echo "Detected CPU cores: $cores"
           echo "cores=$cores" >> $GITHUB_OUTPUT
 
-      - name: Prepare Results folder
+      - name: Run tests with rerun logic
         run: |
-          rm -rf "Results"
-          mkdir -p "Results"
-        
-      - name: Run Robot tests with pabot
-        id: run_tests
-        run: |
-          pabot --processes ${{ steps.cpu.outputs.cores }} --testlevelsplit \
-          --variable env:${{ github.event.inputs.env }} \
-          --outputdir "Results" ${{ github.event.inputs.suite }}
-          exit_code=$?
-          echo "exit_code=$exit_code" >> $GITHUB_OUTPUT
-          exit $exit_code
-          continue-on-error: true
-          
-      - name: Debug outputs
-        run: |
-          echo "exit_code from run_tests: ${{ steps.run_tests.outputs.exit_code }}"
-          echo "rerun input: ${{ github.event.inputs.rerun }}"
-          
-      - name: Rerun failed tests (if any)
-        if: ${{ steps.run_tests.outputs.exit_code != '0' && github.event.inputs.rerun == 'true' }}
-        run: |
-          echo "🔁 Rerunning failed tests..."
-          if [ ! -f "Results/output.xml" ]; then
-            echo "❌ output.xml not found, cannot rerun."
-            exit 0
-          fi
-          mkdir -p "Results/rerun"
-          pabot --processes ${{ steps.cpu.outputs.cores }} --testlevelsplit \
-            --variable env:${{ github.event.inputs.env }} \
-            --prerunmodifier DataDriver.rerunfailed:"Results/output.xml" \
-            --outputdir "Results/rerun" \
-            --output rerun.xml \
-            --log rerun_log.html \
-            --report rerun_report.html \
-            ${{ github.event.inputs.suite }} || true
+          echo "▶️ Running initial pabot tests..."
+          if ! pabot --processes ${{ steps.cpu.outputs.cores }} --testlevelsplit \
+              --variable env:${{ github.event.inputs.env }} \
+              --outputdir Results \
+              ${{ github.event.inputs.suite }}; then
+              
+              if [[ "${{ github.event.inputs.rerun }}" == "true" && -f Results/output.xml ]]; then
+                  mkdir -p Results Results/rerun
+                  echo "🔁 Initial run failed — rerunning failed tests..."
+                  pabot --processes ${{ steps.cpu.outputs.cores }} --testlevelsplit \
+                      --variable env:${{ github.event.inputs.env }} \
+                      --prerunmodifier DataDriver.rerunfailed:Results/output.xml \
+                      --outputdir Results/rerun \
+                      --output rerun.xml \
+                      --log rerun_log.html \
+                      --report rerun_report.html \
+                      ${{ github.event.inputs.suite }} || true
 
-      - name: Merge results (original + rerun if exists)
-        continue-on-error: true
-        run: |
-          if [ -f "Results/rerun/rerun.xml" ]; then
-            echo "Merging original and rerun results..."
-            rebot --outputdir "Results" \
-              --log "Results/merged_log.html" \
-              --report "Results/merged_report.html" \
-              --output "Results/merged_output.xml" \
-              --merge "Results/output.xml" "Results/rerun/rerun.xml"              
+                  if [ -f Results/rerun/rerun.xml ]; then
+                      echo "📊 Merging results..."
+                      rebot --outputdir Results \
+                          --log Results/merged_log.html \
+                          --report Results/merged_report.html \
+                          --output Results/merged_output.xml \
+                          --merge Results/output.xml Results/rerun/rerun.xml
+                  else
+                      echo "⚠️ No rerun.xml produced. Skipping merge."
+                  fi
+              else
+                  echo "⚠️ Rerun disabled or output.xml missing. Skipping rerun."
+              fi
           fi
+
+          echo "✅ Script execution completed"
+
       - name: Upload Robot Results
         uses: actions/upload-artifact@v4
         with:
