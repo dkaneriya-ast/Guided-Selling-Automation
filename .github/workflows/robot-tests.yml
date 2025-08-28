@@ -45,7 +45,7 @@ jobs:
 
       - name: Prepare Results folder
         run: |
-          rm -rf "$ROBOT_WORKSPACE/Results
+          rm -rf "$ROBOT_WORKSPACE/Results"
           mkdir -p "$ROBOT_WORKSPACE/Results"
 
       - name: Run Robot tests with pabot
