@@ -3,10 +3,6 @@ name: Robot Framework Tests
 on:
   workflow_dispatch:
     inputs:
-      suite:
-        description: "Robot test suite to run (e.g., Tests/GuidedSellingFlow.robot)"
-        required: true
-        default: "Tests/GuidedSellingFlow.robot"
       env:
         description: "Environment to run against (dev/stg/prod)"
         required: true
@@ -47,7 +43,7 @@ jobs:
           if ! pabot --processes ${{ steps.cpu.outputs.cores }} --testlevelsplit \
               --variable env:${{ github.event.inputs.env }} \
               --outputdir Results \
-              ${{ github.event.inputs.suite }}; then
+              Tests/GuidedSellingFlow.robot; then
               
               if [[ "${{ github.event.inputs.rerun }}" == "true" && -f Results/output.xml ]]; then
                   mkdir -p Results Results/rerun
@@ -59,7 +55,7 @@ jobs:
                       --output rerun.xml \
                       --log rerun_log.html \
                       --report rerun_report.html \
-                      ${{ github.event.inputs.suite }} || true
+                      Tests/GuidedSellingFlow.robot || true
 
                   if [ -f Results/rerun/rerun.xml ]; then
                       echo "📊 Merging results..."
