@@ -129,11 +129,12 @@ pip install -r requirements.txt
 
   <li>
     To run the tests, use the following command:
-    <pre><code>pabot --processes 4 --testlevelsplit --outputdir Results Tests/GuidedSellingFlow.robot</code></pre>
+    <pre><code>pabot --processes 4 --testlevelsplit --variable env:dev --outputdir Results Tests/GuidedSellingFlow.robot</code></pre>
     <ul>
       <li><code>--processes</code>: Number of parallel test runners to use. You can adjust this value based on your system’s core count (e.g., 2, 4, 6, 8).</li>
       <li><code>--testlevelsplit</code>: Ensures each test case is split and run independently across processes.</li>
       <li><code>--outputdir</code>: Directory where log files and the generated Excel result file will be stored.</li>
+      <li><code>----variable env:stg</code>: Sets the environment for the test run. Replace stg with dev or prod to run against a different environment.</li>
     </ul>
   </li>
 

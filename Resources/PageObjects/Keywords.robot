@@ -1,5 +1,5 @@
 *** Settings ***
-Resource            ../Resources/Common.robot
+Resource            ../Common.robot
 Resource            Locators.robot
 Library             Collections
 Library             String
@@ -60,7 +60,7 @@ Write Test Results to Excel File
     # Save WorkBook
 
 Open Storefront and Reject Cookies
-    Go To    ${env}
+    Go To    ${${env}}
     Wait For Condition	return document.readyState == "complete"    timeout=30s
     Wait Until Element Is Visible    ${rejectCookies}    timeout=20s
     Click Element    ${rejectCookies}
