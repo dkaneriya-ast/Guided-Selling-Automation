@@ -1,4 +1,4 @@
-name: Robot Framework Tests
+name: Trigger Robot Tests Manually
 
 on:
   workflow_dispatch:
@@ -13,68 +13,57 @@ on:
         default: "true"
 
 jobs:
-  test:
+  run_tests:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.10"
-
-      - name: Install dependencies
+      - name: Clear Reports directory
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          echo "🧹 Cleaning Reports directory..."
+          rm -rf Reports/*
+          mkdir -p Reports
 
-      - name: Detect CPU cores
-        id: cpu
+      - name: Run Robot Framework Tests (Initial)
+        id: initial
         run: |
-          cores=$(nproc)
-          echo "cores=$cores" >> $GITHUB_OUTPUT
+          echo "▶️ Running initial Robot tests..."
+          docker run \
+            -v ${PWD}/Reports:/opt/robotframework/reports:Z \
+            -v ${PWD}/Tests:/opt/robotframework/tests:Z \
+            -e ROBOT_OPTIONS="--variable env:${{ github.event.inputs.env }} /opt/robotframework/tests/GuidedSellingFlow.robot" \
+            --user $(id -u):$(id -g) \
+            ppodgorsek/robot-framework:latest || echo "INITIAL_FAILED=true" >> $GITHUB_ENV
 
-      - name: Run initial Robot tests
-        run: |
-          echo "▶️ Running initial pabot tests..."
-          pabot --processes ${{ steps.cpu.outputs.cores }} --testlevelsplit \
-                --variable env:${{ github.event.inputs.env }} \
-                --outputdir Results \
-                Tests/GuidedSellingFlow.robot || echo "INITIAL_FAILED=true" >> $GITHUB_ENV
-
-      - name: Rerun failed tests (if any)
+      - name: Rerun failed tests (if enabled)
         if: ${{ env.INITIAL_FAILED == 'true' && github.event.inputs.rerun == 'true' }}
         run: |
           echo "🔁 Rerunning failed tests..."
-          mkdir -p Results/rerun
+          mkdir -p Reports/rerun
+          docker run \
+            -v ${PWD}/Reports:/opt/robotframework/reports:Z \
+            -v ${PWD}/Tests:/opt/robotframework/tests:Z \
+            -e ROBOT_OPTIONS="--variable env:${{ github.event.inputs.env }} --prerunmodifier DataDriver.rerunfailed:/opt/robotframework/reports/output.xml --outputdir /opt/robotframework/reports/rerun --output rerun.xml --log rerun_log.html --report rerun_report.html --runemptysuite /opt/robotframework/tests/GuidedSellingFlow.robot" \
+            --user $(id -u):$(id -g) \
+            ppodgorsek/robot-framework:latest || true
 
-          pabot --processes ${{ steps.cpu.outputs.cores }} --testlevelsplit \
-                --variable env:${{ github.event.inputs.env }} \
-                --prerunmodifier DataDriver.rerunfailed:Results/output.xml \
-                --outputdir Results/rerun \
-                --output rerun.xml \
-                --log rerun_log.html \
-                --report rerun_report.html \
-                --runemptysuite \
-                Tests/GuidedSellingFlow.robot || true
-
-          if [ -f Results/rerun/rerun.xml ]; then
-              echo "📊 Merging results..."
-              rebot --outputdir Results \
-                    --log Results/merged_log.html \
-                    --report Results/merged_report.html \
-                    --output Results/merged_output.xml \
-                    --merge Results/output.xml Results/rerun/rerun.xml
+          if [ -f Reports/rerun/rerun.xml ]; then
+            echo "📊 Merging results..."
+            docker run \
+              -v ${PWD}/Reports:/opt/robotframework/reports:Z \
+              -v ${PWD}/Tests:/opt/robotframework/tests:Z \
+              -e ROBOT_OPTIONS="--outputdir /opt/robotframework/reports --log merged_log.html --report merged_report.html --output merged_output.xml --merge /opt/robotframework/reports/output.xml /opt/robotframework/reports/rerun/rerun.xml" \
+              --user $(id -u):$(id -g) \
+              ppodgorsek/robot-framework:latest
           else
-              echo "⚠️ No rerun.xml produced. Skipping merge."
+            echo "⚠️ No rerun.xml produced. Skipping merge."
           fi
 
-      - name: Upload Robot Results
-        if: always()
+      - name: Upload reports
         uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: robot-results
-          path: Results/
+          name: robot-reports
+          path: Reports/
           retention-days: 7
