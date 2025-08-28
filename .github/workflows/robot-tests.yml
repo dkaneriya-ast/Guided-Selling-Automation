@@ -73,7 +73,7 @@ jobs:
             exit 0
           fi
           mkdir -p "Results/rerun"
-          pabot --processes ${{ steps.cpu.outputs.cores }} --testlevelsplit \
+          pabot --verbose --processes ${{ steps.cpu.outputs.cores }} --testlevelsplit \
             --variable env:${{ github.event.inputs.env }} \
             --prerunmodifier DataDriver.rerunfailed:"Results/output.xml" \
             --outputdir "Results/rerun" \
