@@ -32,9 +32,10 @@ jobs:
           docker run \
             -v ${PWD}/Reports:/opt/robotframework/reports:Z \
             -v ${PWD}/Tests:/opt/robotframework/tests:Z \
-            -e ROBOT_OPTIONS="--variable env:${{ github.event.inputs.env }} /opt/robotframework/tests/GuidedSellingFlow.robot" \
+            -e ROBOT_OPTIONS="--variable env:${{ github.event.inputs.env }}" \
             --user $(id -u):$(id -g) \
-            ppodgorsek/robot-framework:latest || echo "INITIAL_FAILED=true" >> $GITHUB_ENV
+            ppodgorsek/robot-framework:latest \
+            /opt/robotframework/tests/GuidedSellingFlow.robot || echo "INITIAL_FAILED=true" >> $GITHUB_ENV
 
       - name: Rerun failed tests (if enabled)
         if: ${{ env.INITIAL_FAILED == 'true' && github.event.inputs.rerun == 'true' }}
@@ -44,9 +45,10 @@ jobs:
           docker run \
             -v ${PWD}/Reports:/opt/robotframework/reports:Z \
             -v ${PWD}/Tests:/opt/robotframework/tests:Z \
-            -e ROBOT_OPTIONS="--variable env:${{ github.event.inputs.env }} --prerunmodifier DataDriver.rerunfailed:/opt/robotframework/reports/output.xml --outputdir /opt/robotframework/reports/rerun --output rerun.xml --log rerun_log.html --report rerun_report.html --runemptysuite /opt/robotframework/tests/GuidedSellingFlow.robot" \
+            -e ROBOT_OPTIONS="--variable env:${{ github.event.inputs.env }} --prerunmodifier DataDriver.rerunfailed:/opt/robotframework/reports/output.xml --outputdir /opt/robotframework/reports/rerun --output rerun.xml --log rerun_log.html --report rerun_report.html --runemptysuite" \
             --user $(id -u):$(id -g) \
-            ppodgorsek/robot-framework:latest || true
+            ppodgorsek/robot-framework:latest \
+            /opt/robotframework/tests/GuidedSellingFlow.robot || true
 
           if [ -f Reports/rerun/rerun.xml ]; then
             echo "📊 Merging results..."
