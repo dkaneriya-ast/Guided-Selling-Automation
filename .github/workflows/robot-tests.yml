@@ -69,18 +69,22 @@ jobs:
         run: |
           echo "🔁 Rerunning failed tests..."
           if [ ! -f "$ROBOT_WORKSPACE/Results/output.xml" ]; then
-            echo "❌ output.xml not found, cannot rerun."
-            exit 0
+          echo "❌ output.xml not found, cannot rerun."
+          exit 0
+          fi
+          if ! grep -q 'status="FAIL"' "$ROBOT_WORKSPACE/Results/output.xml"; then
+          echo "✅ No failed tests found, skipping rerun."
+          exit 0
           fi
           mkdir -p "$ROBOT_WORKSPACE/Results/rerun"
           pabot --verbose --processes ${{ steps.cpu.outputs.cores }} --testlevelsplit \
-            --variable env:${{ github.event.inputs.env }} \
-            --prerunmodifier DataDriver.rerunfailed:"$ROBOT_WORKSPACE/Results/output.xml" \
-            --outputdir "$ROBOT_WORKSPACE/Results/rerun" \
-            --output rerun.xml \
-            --log rerun_log.html \
-            --report rerun_report.html \
-            ${{ github.event.inputs.suite }} || true
+          --variable env:${{ github.event.inputs.env }} \
+          --prerunmodifier DataDriver.rerunfailed:"$PWD/Results/output.xml" \
+          --outputdir "$ROBOT_WORKSPACE/Results/rerun" \
+          --output rerun.xml \
+          --log rerun_log.html \
+          --report rerun_report.html \
+          ${{ github.event.inputs.suite }} || true
 
       - name: Merge results (original + rerun if exists)
         if: always()
