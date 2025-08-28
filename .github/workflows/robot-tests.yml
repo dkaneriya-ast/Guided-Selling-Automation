@@ -1,32 +1,27 @@
-name: Robot Framework Tests (Two-Job Retry)
+name: Robot Framework Tests
 
 on:
   workflow_dispatch:
     inputs:
       suite:
-        description: "Robot test suite to run"
+        description: "Robot test suite to run (e.g., Tests/GuidedSellingFlow.robot)"
         required: true
         default: "Tests/GuidedSellingFlow.robot"
       rerun:
-        description: "Allow rerunning failed tests? (true/false)"
-        required: true
+        description: "Rerun failed tests? (true/false)"
+        required: false
         default: "true"
       env:
         description: "Environment to run against (dev/stg/prod)"
         required: true
-        default: "dev"
+        default: "dev"        
 
 jobs:
-  # =================================================================
-  # JOB 1: Run the tests for the first time. Its only job is to run
-  # the tests and report back if they passed or failed.
-  # =================================================================
-  initial-run:
+  test:
     runs-on: ubuntu-latest
-    # Define an output for this job to signal its status to other jobs
-    outputs:
-      status: ${{ steps.check_failures.outputs.status }}
-    
+    env:
+      ROBOT_WORKSPACE: ${{ github.workspace }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -45,137 +40,65 @@ jobs:
         id: cpu
         run: |
           cores=$(nproc)
+          echo "Detected CPU cores: $cores"
           echo "cores=$cores" >> $GITHUB_OUTPUT
+
+      - name: Prepare Results folder
+        run: |
+          rm -rf "$ROBOT_WORKSPACE/Results"
+          mkdir -p "$ROBOT_WORKSPACE/Results"
 
       - name: Run Robot tests with pabot
         id: run_tests
-        # We need the job to continue even if pabot finds failures
-        continue-on-error: true
         run: |
-          mkdir -p Results
+          set +e
           pabot --processes ${{ steps.cpu.outputs.cores }} --testlevelsplit \
             --variable env:${{ github.event.inputs.env }} \
-            --outputdir Results \
-            ${{ github.event.inputs.suite }}
+            --outputdir "$ROBOT_WORKSPACE/Results" ${{ github.event.inputs.suite }}
+          echo "exit_code=$?" >> $GITHUB_OUTPUT
+          set -e
+        continue-on-error: true
 
-      - name: Check for failures and set job output
-        id: check_failures
-        # This step will succeed, but it sets the output based on test results
+      - name: Debug outputs
         run: |
-          # Use rebot to check the results. --nostatusrc will make it exit with an
-          # error code if tests failed, which we can check with `if ! ...`
-          if ! rebot --nostatusrc Results/output.xml; then
-            echo "Initial run has failures."
-            echo "status=failed" >> $GITHUB_OUTPUT
-          else
-            echo "Initial run passed."
-            echo "status=passed" >> $GITHUB_OUTPUT
-          fi
+          echo "exit_code from run_tests: ${{ steps.run_tests.outputs.exit_code }}"
+          echo "rerun input: ${{ github.event.inputs.rerun }}"
 
-      - name: Upload original results artifact
-        # This artifact is only needed if the tests failed and a rerun is required
-        if: steps.check_failures.outputs.status == 'failed'
-        uses: actions/upload-artifact@v4
-        with:
-          name: original-robot-results
-          path: Results/
-          retention-days: 1
-
----
-  # =================================================================
-  # JOB 2: Rerun failed tests. This job ONLY runs if Job 1 failed.
-  # =================================================================
-  rerun-failed:
-    runs-on: ubuntu-latest
-    needs: initial-run # Depends on the first job finishing
-    # This job ONLY runs if the first job's output was 'failed' AND the user enabled reruns
-    if: needs.initial-run.outputs.status == 'failed' && github.event.inputs.rerun == 'true'
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.10"
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-      
-      # Each job is a fresh machine, so we need to detect cores again
-      - name: Detect CPU cores
-        id: cpu
-        run: |
-          cores=$(nproc)
-          echo "cores=$cores" >> $GITHUB_OUTPUT
-
-      - name: Download original results artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: original-robot-results
-          path: Results
-
-      - name: Rerun failed tests with pabot
+      - name: Rerun failed tests (if any)
+        if: ${{ steps.run_tests.outputs.exit_code != '0' && github.event.inputs.rerun == 'true' }}
         run: |
           echo "🔁 Rerunning failed tests..."
-          mkdir -p Results/rerun
-          pabot --rerunfailed Results/output.xml \
-            --processes ${{ steps.cpu.outputs.cores }} \
-            --testlevelsplit \
+          if [ ! -f "$ROBOT_WORKSPACE/Results/output.xml" ]; then
+            echo "❌ output.xml not found, cannot rerun."
+            exit 0
+          fi
+          mkdir -p "$ROBOT_WORKSPACE/Results/rerun"
+          pabot --processes ${{ steps.cpu.outputs.cores }} --testlevelsplit \
             --variable env:${{ github.event.inputs.env }} \
-            --outputdir Results/rerun \
-            --output rerun.xml
+            --prerunmodifier DataDriver.rerunfailed:"$ROBOT_WORKSPACE/Results/output.xml" \
+            --outputdir "$ROBOT_WORKSPACE/Results/rerun" \
+            --output rerun.xml \
+            --log rerun_log.html \
+            --report rerun_report.html \
+            ${{ github.event.inputs.suite }} || true
 
-      - name: Merge and Finalize Results
+      - name: Merge results (original + rerun if exists)
+        if: always()
+        continue-on-error: true
         run: |
-          echo "Merging original and rerun results..."
-          rebot --outputdir Results \
-            --output final_output.xml \
-            --log final_log.html \
-            --report final_report.html \
-            --merge Results/output.xml Results/rerun/rerun.xml
+          if [ -f "$ROBOT_WORKSPACE/Results/rerun/rerun.xml" ]; then
+            echo "Merging original and rerun results..."
+            rebot --outputdir "$ROBOT_WORKSPACE/Results" \
+              --log "$ROBOT_WORKSPACE/Results/merged_log.html" \
+              --report "$ROBOT_WORKSPACE/Results/merged_report.html" \
+              --output "$ROBOT_WORKSPACE/Results/merged_output.xml" \
+              --merge "$ROBOT_WORKSPACE/Results/output.xml" "$ROBOT_WORKSPACE/Results/rerun/rerun.xml"              
+          fi
 
-      - name: Upload Final Merged Results
+      - name: Upload Robot Results
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: final-robot-results
-          path: |
-            Results/final_report.html
-            Results/final_log.html
-            Results/final_output.xml
+          name: robot-results
+          path: Results/
           retention-days: 7
-
----
-  # =================================================================
-  # JOB 3: A final "gatekeeper" job to determine the workflow's
-  # overall success or failure based on the previous jobs.
-  # =================================================================
-  final-status-check:
-    runs-on: ubuntu-latest
-    needs: [initial-run, rerun-failed]
-    if: always() # This job must always run to determine the final outcome
-
-    steps:
-      - name: Evaluate final status
-        run: |
-          echo "Initial run status: ${{ needs.initial-run.outputs.status }}"
-          echo "Rerun job status (success, failure, or skipped): ${{ needs.rerun-failed.result }}"
-
-          # Case 1: Initial run passed
-          if [ "${{ needs.initial-run.outputs.status }}" == "passed" ]; then
-            echo "✅ All tests passed on the first run. Workflow is successful."
-            exit 0
-          fi
-
-          # Case 2: Rerun job ran and succeeded
-          if [ "${{ needs.rerun-failed.result }}" == "success" ]; then
-            echo "✅ Tests failed initially but passed after rerun. Workflow is successful."
-            exit 0
-          fi
-          
-          # If neither of the above is true, the workflow has failed.
-          echo "❌ Workflow has failed. See previous jobs for details."
-          exit 1
