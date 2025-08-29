@@ -1,4 +1,5 @@
 name: Robot Framework Tests
+
 on:
   workflow_dispatch:
     inputs:
@@ -11,9 +12,11 @@ on:
         required: true
         type: boolean
         default: true
+
 jobs:
   test:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -42,7 +45,7 @@ jobs:
 
       - name: Run initial Robot tests
         id: initial_run
-        continue-on-error: true
+        continue-on-error: true   # ✅ don’t fail workflow here
         run: |
           echo "➡️ Running initial pabot tests..."
           pabot --processes ${{ steps.cpu.outputs.cores }} \
@@ -55,18 +58,16 @@ jobs:
         if: steps.initial_run.outcome == 'failure' && github.event.inputs.rerun == 'true'
         run: |
           echo "🔁 Rerunning failed tests..."
-          # Use '|| true' so this step doesn't fail if tests still fail, allowing the merge to proceed
-          pabot --verbose --processes ${{ steps.cpu.outputs.cores }} \
+          pabot --processes ${{ steps.cpu.outputs.cores }} \
                 --testlevelsplit \
                 --variable env:${{ github.event.inputs.env }} \
-                --prerunmodifier robot.rerunfailed:Results/output.xml \
+                --pabotprerunmodifier DataDriver.rerunfailed:Results/output.xml \
                 --outputdir Results/rerun \
                 --output rerun.xml \
                 Tests/GuidedSellingFlow.robot || true
-          
+
           if [ -f Results/rerun/rerun.xml ]; then
             echo "📊 Merging results..."
-            # Rebot's exit code will determine the final status of the job.
             rebot --outputdir Results \
                   --merge Results/output.xml Results/rerun/rerun.xml \
                   --output merged_output.xml \
@@ -74,17 +75,17 @@ jobs:
                   --report merged_report.html
           else
             echo "⚠️ No rerun.xml was produced. The initial failure will stand."
-            exit 1 # Explicitly fail the job if the rerun produced no output
+            exit 1
           fi
 
-      - name: Check initial run status
+      - name: Check initial run status (rerun disabled)
         if: steps.initial_run.outcome == 'failure' && github.event.inputs.rerun == 'false'
         run: |
           echo "::error::Initial tests failed and reruns were disabled. Failing the workflow."
           exit 1
-          
+
       - name: Upload Robot Results
-        if: always()
+        if: always()   # ✅ always upload, even on failure
         uses: actions/upload-artifact@v4
         with:
           name: robot-results-${{ github.event.inputs.env }}
