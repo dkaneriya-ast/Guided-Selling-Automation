@@ -60,11 +60,12 @@ jobs:
 
           if [ -f Results/rerun/rerun.xml ]; then
             echo "📊 Merging results..."
-            rebot --outputdir Results \
-                  --merge Results/output.xml Results/rerun/rerun.xml \
-                  --output merged_output.xml \
-                  --log merged_log.html \
-                  --report merged_report.html
+            rebot --merge \
+              --output Results/merged_output.xml \
+              --log Results/merged_log.html \
+              --report Results/merged_report.html \
+              Results/output.xml Results/rerun/rerun.xml
+
           else
             echo "⚠️ No rerun.xml was produced. The initial failure will stand."
             exit 1
