@@ -56,7 +56,7 @@ jobs:
         run: |
           echo "🔁 Rerunning failed tests..."
           # Use '|| true' so this step doesn't fail if tests still fail, allowing the merge to proceed
-          pabot --processes ${{ steps.cpu.outputs.cores }} \
+          pabot --verbose --processes ${{ steps.cpu.outputs.cores }} \
                 --testlevelsplit \
                 --variable env:${{ github.event.inputs.env }} \
                 --prerunmodifier DataDriver.rerunfailed:Results/output.xml \
