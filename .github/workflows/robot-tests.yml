@@ -59,7 +59,7 @@ jobs:
           pabot --verbose --processes ${{ steps.cpu.outputs.cores }} \
                 --testlevelsplit \
                 --variable env:${{ github.event.inputs.env }} \
-                --rerunfailed Results/output.xml \
+                --prerunmodifier robot.rerunfailed:Results/output.xml \
                 --outputdir Results/rerun \
                 --output rerun.xml \
                 Tests/GuidedSellingFlow.robot || true
