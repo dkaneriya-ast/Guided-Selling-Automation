@@ -3,27 +3,26 @@ name: Robot Framework Tests
 on:
   workflow_dispatch:
     inputs:
-      suite:
-        description: "Robot test suite to run (e.g., Tests/GuidedSellingFlow.robot)"
+      env:
+        description: "Environment to run against (dev/stg/prod)"
         required: true
-        default: "Tests/GuidedSellingFlow.robot"
+        default: "dev"
       rerun:
-        description: "Rerun failed tests? (true/false)"
-        required: false
-        default: "true"
+        description: "Enable rerun of failed tests?"
+        required: true
+        type: boolean
+        default: true
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    env:
-      ROBOT_WORKSPACE: ${{ github.workspace }}
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
@@ -34,65 +33,54 @@ jobs:
 
       - name: Detect CPU cores
         id: cpu
-        run: |
-          cores=$(nproc)
-          echo "Detected CPU cores: $cores"
-          echo "cores=$cores" >> $GITHUB_OUTPUT
+        run: echo "cores=$(nproc)" >> $GITHUB_OUTPUT
 
-      - name: Prepare Results folder
+      - name: Run initial Robot tests
+        id: initial_run
+        continue-on-error: true   # ✅ don’t fail workflow here
         run: |
-          mkdir -p "$ROBOT_WORKSPACE/Results"
-          rm -f "$ROBOT_WORKSPACE/Results/results.xlsx"
+          echo "➡️ Running initial pabot tests..."
+          pabot --processes ${{ steps.cpu.outputs.cores }} \
+                --testlevelsplit \
+                --variable env:${{ github.event.inputs.env }} \
+                --outputdir Results \
+                Tests/GuidedSellingFlow.robot
 
-      - name: Run Robot tests with pabot
-        id: run_tests
-        run: |
-          set +e
-          pabot --processes ${{ steps.cpu.outputs.cores }} --testlevelsplit \
-            --outputdir "$ROBOT_WORKSPACE/Results" ${{ github.event.inputs.suite }}
-          echo "exit_code=$?" >> $GITHUB_OUTPUT
-          set -e
-        continue-on-error: true
-
-      - name: Debug outputs
-        run: |
-          echo "exit_code from run_tests: ${{ steps.run_tests.outputs.exit_code }}"
-          echo "rerun input: ${{ github.event.inputs.rerun }}"
-
-      - name: Rerun failed tests (if any)
-        if: ${{ steps.run_tests.outputs.exit_code != '0' && github.event.inputs.rerun == 'true' }}
+      - name: Rerun failed tests and Merge Results
+        if: steps.initial_run.outcome == 'failure' && github.event.inputs.rerun == 'true'
         run: |
           echo "🔁 Rerunning failed tests..."
-          if [ ! -f "$ROBOT_WORKSPACE/Results/output.xml" ]; then
-            echo "❌ output.xml not found, cannot rerun."
-            exit 0
-          fi
-          mkdir -p "$ROBOT_WORKSPACE/Results/rerun"
-          pabot --processes ${{ steps.cpu.outputs.cores }} --testlevelsplit \
-            --prerunmodifier DataDriver.rerunfailed:"$ROBOT_WORKSPACE/Results/output.xml" \
-            --outputdir "$ROBOT_WORKSPACE/Results/rerun" \
-            --output rerun.xml \
-            --log rerun_log.html \
-            --report rerun_report.html \
-            ${{ github.event.inputs.suite }} || true
+          pabot --processes ${{ steps.cpu.outputs.cores }} \
+                --testlevelsplit \
+                --variable env:${{ github.event.inputs.env }} \
+                --pabotprerunmodifier DataDriver.rerunfailed:Results/output.xml \
+                --outputdir Results/rerun \
+                --output rerun.xml \
+                Tests/GuidedSellingFlow.robot || true
 
-      - name: Merge results (original + rerun if exists)
-        if: always()
-        continue-on-error: true
-        run: |
-          if [ -f "$ROBOT_WORKSPACE/Results/rerun/rerun.xml" ]; then
-            echo "Merging original and rerun results..."
-            rebot --outputdir "$ROBOT_WORKSPACE/Results" \
-              --log "$ROBOT_WORKSPACE/Results/merged_log.html" \
-              --report "$ROBOT_WORKSPACE/Results/merged_report.html" \
-              --output "$ROBOT_WORKSPACE/Results/merged_output.xml" \
-              --merge "$ROBOT_WORKSPACE/Results/output.xml" "$ROBOT_WORKSPACE/Results/rerun/rerun.xml"
+          if [ -f Results/rerun/rerun.xml ]; then
+            echo "📊 Merging results..."
+            rebot --merge \
+              --output Results/merged_output.xml \
+              --log Results/merged_log.html \
+              --report Results/merged_report.html \
+              Results/output.xml Results/rerun/rerun.xml
+
+          else
+            echo "⚠️ No rerun.xml was produced. The initial failure will stand."
+            exit 1
           fi
+
+      - name: Check initial run status (rerun disabled)
+        if: steps.initial_run.outcome == 'failure' && github.event.inputs.rerun == 'false'
+        run: |
+          echo "::error::Initial tests failed and reruns were disabled. Failing the workflow."
+          exit 1
 
       - name: Upload Robot Results
-        if: always()
+        if: always()   # ✅ always upload, even on failure
         uses: actions/upload-artifact@v4
         with:
-          name: robot-results
+          name: robot-results-${{ github.event.inputs.env }}
           path: Results/
           retention-days: 7
