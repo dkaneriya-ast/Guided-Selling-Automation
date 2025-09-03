@@ -14,13 +14,58 @@ on:
         default: true
 
 jobs:
+  prepare-file:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Prompt for File Upload
+        id: upload
+        uses: boasihq/interactive-inputs@v2
+        with:
+          ngrok-authtoken: ${{ secrets.NGROK_AUTHTOKEN }}
+          timeout: 160
+          title: "Upload test data for Robot Framework"
+          interactive: |
+            fields:
+              - label: locations_file
+                properties:
+                  display: Upload locations.xlsx
+                  type: file
+                  required: true
+                  description: Please upload the Excel test data file (must be .xlsx)
+                  acceptedFileTypes:
+                    - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+                    
+      - name: Save uploaded file as Data/locations.xlsx
+        run: |
+            printf "%s" "${{ steps.interactive-inputs.outputs.locations_file }}" | base64 --decode > Data/locations.xlsx
+            echo "✅ Uploaded file saved to Data/locations.xlsx"
+
+      - name: Upload prepared Data folder (with locations.xlsx)
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-data
+          path: Data/
+
   test:
+    needs: prepare-file
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Download prepared Data folder
+        uses: actions/download-artifact@v4
+        with:
+          name: test-data
+          path: Data
+          
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
