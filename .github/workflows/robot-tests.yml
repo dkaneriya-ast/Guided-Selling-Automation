@@ -41,19 +41,15 @@ jobs:
                   acceptedFileTypes:
                     - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
 
-      - name: Debug interactive inputs outputs
-        run: |
-          echo "📊 Dumping interactive inputs outputs..."
-          echo '${{ toJSON(steps.upload.outputs) }}'
-
       - name: Move uploaded file to Data/locations.xlsx
         run: |
           mkdir -p Data
-          uploaded_dir="${{ steps.upload.outputs['locations-file'] }}"
+          uploaded_dir="${{ steps.upload.outputs.locations_file }}"
           if [ -z "$uploaded_dir" ]; then
             echo "::error::No uploaded directory found in outputs!"
             exit 1
           fi
+
           echo "📂 Uploaded directory: $uploaded_dir"
           uploaded_file=$(ls -1 "$uploaded_dir" | head -n 1 || true)
 
@@ -61,6 +57,7 @@ jobs:
             echo "::error::No file found in uploaded directory!"
             exit 1
           fi
+
           cp "$uploaded_dir/$uploaded_file" Data/locations.xlsx
           echo "✅ Uploaded file saved to Data/locations.xlsx"
 
@@ -75,12 +72,13 @@ jobs:
       - name: Upload prepared Data folder (with locations.xlsx)
         uses: actions/upload-artifact@v4
         with:
-          name: test-data
+          name: test-data-${{ github.run_id }}
           path: Data/
 
   test:
     needs: prepare-file
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -88,7 +86,7 @@ jobs:
       - name: Download prepared Data folder
         uses: actions/download-artifact@v4
         with:
-          name: test-data
+          name: test-data-${{ github.run_id }}
           path: Data
           
       - name: Set up Python
@@ -150,6 +148,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: robot-results-${{ github.event.inputs.env }}
+          name: robot-results-${{ github.event.inputs.env }}-${{ github.run_id }}
           path: Results/
           retention-days: 7
