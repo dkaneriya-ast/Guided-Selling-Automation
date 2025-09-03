@@ -40,12 +40,29 @@ jobs:
                   description: Please upload the Excel test data file (must be .xlsx)
                   acceptedFileTypes:
                     - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
-                    
+
+      - name: Debug interactive inputs outputs
+        run: |
+          echo "📊 Dumping interactive inputs outputs..."
+          echo '${{ toJSON(steps.upload.outputs) }}'
+
       - name: Move uploaded file to Data/locations.xlsx
         run: |
           mkdir -p Data
           uploaded_dir="${{ steps.upload.outputs.locations_file }}"
-          uploaded_file=$(ls -1 "$uploaded_dir" | head -n 1)
+          if [ -z "$uploaded_dir" ]; then
+            echo "::error::No uploaded directory found in outputs!"
+            exit 1
+          fi
+
+          echo "📂 Uploaded directory: $uploaded_dir"
+          uploaded_file=$(ls -1 "$uploaded_dir" | head -n 1 || true)
+
+          if [ -z "$uploaded_file" ]; then
+            echo "::error::No file found in uploaded directory!"
+            exit 1
+          fi
+
           cp "$uploaded_dir/$uploaded_file" Data/locations.xlsx
           echo "✅ Uploaded file saved to Data/locations.xlsx"
 
@@ -92,7 +109,7 @@ jobs:
 
       - name: Run initial Robot tests
         id: initial_run
-        continue-on-error: true   # ✅ don’t fail workflow here
+        continue-on-error: true
         run: |
           echo "➡️ Running initial pabot tests..."
           pabot --processes ${{ steps.cpu.outputs.cores }} \
@@ -132,7 +149,7 @@ jobs:
           exit 1
 
       - name: Upload Robot Results
-        if: always()   # ✅ always upload, even on failure
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: robot-results-${{ github.event.inputs.env }}
