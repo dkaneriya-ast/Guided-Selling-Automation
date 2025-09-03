@@ -14,7 +14,7 @@ on:
         default: true
 
 jobs:
-  prepare-file:
+    prepare-file:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -35,20 +35,23 @@ jobs:
               - label: locations_file
                 properties:
                   display: Upload locations.xlsx
-                  type: file
+                  type: multifile
                   required: true
                   description: Please upload the Excel test data file (must be .xlsx)
                   acceptedFileTypes:
                     - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
                     
-      - name: Save uploaded file as Data/locations.xlsx
+      - name: Move uploaded file to Data/locations.xlsx
         run: |
-            printf "%s" "${{ steps.interactive-inputs.outputs.locations_file }}" | base64 --decode > Data/locations.xlsx
-            echo "✅ Uploaded file saved to Data/locations.xlsx"
+          mkdir -p Data
+          uploaded_dir="${{ steps.upload.outputs.locations_file }}"
+          uploaded_file=$(ls -1 "$uploaded_dir" | head -n 1)
+          cp "$uploaded_dir/$uploaded_file" Data/locations.xlsx
+          echo "✅ Uploaded file saved to Data/locations.xlsx"
 
       - name: Validate uploaded file is Excel
         run: |
-          if ! file Data/locations.xlsx | grep -q "Excel"; then
+          if ! file Data/locations.xlsx | grep -E -q "Excel|Zip archive"; then
             echo "::error::Uploaded file is not a valid Excel .xlsx file"
             exit 1
           fi
