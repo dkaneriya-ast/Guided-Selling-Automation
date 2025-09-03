@@ -49,12 +49,11 @@ jobs:
       - name: Move uploaded file to Data/locations.xlsx
         run: |
           mkdir -p Data
-          uploaded_dir="${{ steps.upload.outputs.locations_file }}"
+          uploaded_dir="${{ steps.upload.outputs['locations-file'] }}"
           if [ -z "$uploaded_dir" ]; then
             echo "::error::No uploaded directory found in outputs!"
             exit 1
           fi
-
           echo "📂 Uploaded directory: $uploaded_dir"
           uploaded_file=$(ls -1 "$uploaded_dir" | head -n 1 || true)
 
@@ -62,7 +61,6 @@ jobs:
             echo "::error::No file found in uploaded directory!"
             exit 1
           fi
-
           cp "$uploaded_dir/$uploaded_file" Data/locations.xlsx
           echo "✅ Uploaded file saved to Data/locations.xlsx"
 
