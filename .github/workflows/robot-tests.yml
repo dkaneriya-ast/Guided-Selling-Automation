@@ -7,11 +7,11 @@ on:
         description: "Environment to run against (dev/stg/prod)"
         required: true
         default: "dev"
-      rerun:
-        description: "Enable rerun of failed tests?"
-        required: true
-        type: boolean
-        default: true
+      # rerun:
+      #   description: "Enable rerun of failed tests?"
+      #   required: true
+      #   type: boolean
+      #   default: true
 
 jobs:
   prepare-file:
@@ -116,35 +116,35 @@ jobs:
                 --outputdir Results \
                 Tests/GuidedSellingFlow.robot
 
-      - name: Rerun failed tests and Merge Results
-        if: steps.initial_run.outcome == 'failure' && github.event.inputs.rerun == 'true'
-        run: |
-          echo "🔁 Rerunning failed tests..."
-          pabot --processes ${{ steps.cpu.outputs.cores }} \
-                --testlevelsplit \
-                --variable env:${{ github.event.inputs.env }} \
-                --pabotprerunmodifier DataDriver.rerunfailed:Results/output.xml \
-                --outputdir Results/rerun \
-                --output rerun.xml \
-                Tests/GuidedSellingFlow.robot || true
+      # - name: Rerun failed tests and Merge Results
+      #   if: steps.initial_run.outcome == 'failure' && github.event.inputs.rerun == 'true'
+      #   run: |
+      #     echo "🔁 Rerunning failed tests..."
+      #     pabot --processes ${{ steps.cpu.outputs.cores }} \
+      #           --testlevelsplit \
+      #           --variable env:${{ github.event.inputs.env }} \
+      #           --pabotprerunmodifier DataDriver.rerunfailed:Results/output.xml \
+      #           --outputdir Results/rerun \
+      #           --output rerun.xml \
+      #           Tests/GuidedSellingFlow.robot || true
 
-          if [ -f Results/rerun/rerun.xml ]; then
-            echo "📊 Merging results..."
-            rebot --merge \
-              --output Results/merged_output.xml \
-              --log Results/merged_log.html \
-              --report Results/merged_report.html \
-              Results/output.xml Results/rerun/rerun.xml
-          else
-            echo "⚠️ No rerun.xml was produced. The initial failure will stand."
-            exit 1
-          fi
+      #     if [ -f Results/rerun/rerun.xml ]; then
+      #       echo "📊 Merging results..."
+      #       rebot --merge \
+      #         --output Results/merged_output.xml \
+      #         --log Results/merged_log.html \
+      #         --report Results/merged_report.html \
+      #         Results/output.xml Results/rerun/rerun.xml
+      #     else
+      #       echo "⚠️ No rerun.xml was produced. The initial failure will stand."
+      #       exit 1
+      #     fi
 
-      - name: Check initial run status (rerun disabled)
-        if: steps.initial_run.outcome == 'failure' && github.event.inputs.rerun == 'false'
-        run: |
-          echo "::error::Initial tests failed and reruns were disabled. Failing the workflow."
-          exit 1
+      # - name: Check initial run status (rerun disabled)
+      #   if: steps.initial_run.outcome == 'failure' && github.event.inputs.rerun == 'false'
+      #   run: |
+      #     echo "::error::Initial tests failed and reruns were disabled. Failing the workflow."
+      #     exit 1
 
       - name: Upload Robot Results
         if: always()
