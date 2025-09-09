@@ -121,7 +121,6 @@ jobs:
         run: |
           echo "🔁 Rerunning failed tests..."
           pabot --processes ${{ steps.cpu.outputs.cores }} \
-                --testlevelsplit \
                 --variable env:${{ github.event.inputs.env }} \
                 --rerunfailed Results/output.xml \
                 --outputdir Results/rerun \
