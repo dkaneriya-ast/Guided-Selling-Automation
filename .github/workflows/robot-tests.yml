@@ -106,8 +106,7 @@ jobs:
         run: echo "cores=$(nproc)" >> $GITHUB_OUTPUT
 
       - name: Run initial Robot tests
-        id: initial_run
-        continue-on-error: true
+        id: initial_run       
         run: |
           echo "➡️ Running initial pabot tests..."
           pabot --processes ${{ steps.cpu.outputs.cores }} \
