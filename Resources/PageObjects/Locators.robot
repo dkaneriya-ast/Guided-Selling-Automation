@@ -45,7 +45,7 @@ ${dateOfPassing}=                   07012025
 ${ownerFirstName}=                  Test
 ${ownerLastName}=                   Test
 ${ownerPhoneNumber}=                +1(987) 654-3210
-${ownerEmailAddress}=               d.kaneriya+test@astoundigital.com
+${ownerEmailAddress}=               dhruvtestplocation@yopmail.com
 ${ownerRelationShipValue}=          Uncle
 
 @{rowHeader}=                       Location Name    Location ID    Disposition    Service    Package Count
