@@ -67,12 +67,12 @@ Open Storefront and Reject Cookies
     Wait Until Element Is Not Visible    ${rejectCookies}
 
 Fetch All Disposition Options
-    Wait Until Element Is Visible    ${disposition&serviceOptions}
+    Wait Until Element Is Visible    ${disposition&serviceOptions}    timeout=20s
     @{options}=    Get WebElements    ${disposition&serviceOptions}
     RETURN    @{options}
 
 Fetch All Service Method Options
-    Wait Until Element Is Visible    ${serviceDetailsStep}
+    Wait Until Element Is Visible    ${serviceDetailsStep}    timeout=20s
     Wait Until Element Is Visible    ${disposition&serviceOptions}
     @{services}=    Get WebElements    ${disposition&serviceOptions}
     RETURN    @{services}
@@ -111,7 +111,7 @@ Start Guided Selling Until Disposition Step
     END        
 
     # choose immediate need
-    Wait Until Page Contains Element    ${immediateNeedRadio}
+    Wait Until Page Contains Element    ${immediateNeedRadio}    timeout=20s
     Click Element    ${immediateNeedRadio}
 
     # enter loved one details
@@ -368,6 +368,90 @@ Perform Guided Selling Flow Single
             ...    ${dispLabel}
             ...    ${serviceLabel}
             ...    ${packageCount}           
+            ${isLastService}=    Evaluate    ${serviceIndex} == ${serviceLength}-1
+            ${isLastDisposition}=    Evaluate    ${dispIndex} == ${dispositionLength}-1
+            IF    not (${isLastService} and ${isLastDisposition})
+                Start Guided Selling Until Disposition Step    ${url}
+            END
+        END
+    END
+
+
+Perform Guided Selling Flow V2
+    [Arguments]    ${url}    ${locationId}
+    Open Storefront and Reject Cookies
+    # Step 1: Get all disposition options
+    Start Guided Selling Until Disposition Step    ${url}
+    ${location}=    Get Text    ${locationName}
+    @{dispositionOptions}=    Fetch All Disposition Options
+    ${dispositionLength}=    Get Length    ${dispositionOptions}
+
+    IF    ${dispositionLength} == 0
+        Fail    No disposition options found for Location ID: ${locationId}
+    END
+
+    FOR    ${dispIndex}    IN RANGE    ${dispositionLength}
+        @{dispositionOptions}=    Fetch All Disposition Options
+        ${disposition}=    Get From List    ${dispositionOptions}    ${dispIndex}
+        ${dispLabel}=    Get Text    ${disposition}
+        Click Element    ${disposition}
+        Click Element    ${continueCTA}
+
+        # Step 2: Get all service method options
+        @{serviceOptions}=    Fetch All Service Method Options
+        ${serviceLength}=    Get Length    ${serviceOptions}
+        
+        
+        IF    ${serviceLength} < 2
+            Fail    No service method options found for Disposition: ${dispLabel} at Location ID: ${locationId}
+        END
+
+        FOR    ${serviceIndex}    IN RANGE    ${serviceLength}
+            IF    ${serviceIndex} != 0
+                @{dispositionOptions}=    Fetch All Disposition Options
+                ${disposition}=    Get From List    ${dispositionOptions}    ${dispIndex}
+                ${dispLabel}=    Get Text    ${disposition}
+                Click Element    ${disposition}
+                Click Element    ${continueCTA}
+            END
+            @{serviceOptions}=    Fetch All Service Method Options
+            ${service}=    Get From List    ${serviceOptions}    ${serviceIndex}
+            ${serviceLabel}=    Get Text    ${service}
+            IF    '${serviceLabel}' == 'A private viewing, service, or celebration at church, funeral home, or other location'
+                ${serviceLabel}=    Set Variable    Facilities
+            ELSE IF    '${serviceLabel}' == 'No formal service. Just the Burial selection' or '${serviceLabel}' == 'No formal service. Just the Cremation selection'
+                ${serviceLabel}=    Set Variable    No Facilities
+            ELSE IF    '${serviceLabel}' == 'I’m not sure yet'
+                ${serviceLabel}=    Set Variable    All
+            END
+            ${service}=    Get WebElement    ${service}
+            Execute Javascript    arguments[0].click();    ARGUMENTS    ${service}
+            # Step 3: Package count
+            ${packageCount}=    Get Package Count for Current Selection
+            IF    ${packageCount} == 0
+                Fail    No packages found for Disposition: ${dispLabel}, Service: ${serviceLabel} at Location ID: ${locationId}
+            END            
+            # Log the full combination
+            Log
+            ...    Package Combination - Location: ${location} | ${locationId} | Disposition: ${dispLabel} | Service: ${serviceLabel} | Packages: ${packageCount}
+            Log To Console
+            ...    Package Combination - Location: ${location} | ${locationId} | Disposition: ${dispLabel} | Service: ${serviceLabel} | Packages: ${packageCount}
+            ${dataRow}=    Catenate
+            ...    SEPARATOR=|
+            ...    ${location}
+            ...    ${locationId}
+            ...    ${dispLabel}
+            ...    ${serviceLabel}
+            ...    ${packageCount}
+            Acquire Lock    result
+            ${existing}=    Get Parallel Value For Key    testResultsGlobal
+            IF    $existing == 'NONE'
+                ${existing}=    Set Variable    ${dataRow}
+            ELSE
+                ${existing}=    Catenate    SEPARATOR=\n    ${existing}    ${dataRow}
+            END
+            Set Parallel Value For Key    testResultsGlobal    ${existing}
+            Release Lock    result
             ${isLastService}=    Evaluate    ${serviceIndex} == ${serviceLength}-1
             ${isLastDisposition}=    Evaluate    ${dispIndex} == ${dispositionLength}-1
             IF    not (${isLastService} and ${isLastDisposition})

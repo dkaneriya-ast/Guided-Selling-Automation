@@ -7,6 +7,10 @@ on:
         description: "Environment to run against (dev/stg/prod)"
         required: true
         default: "dev"
+      test_file:
+        description: "Enter the Robot Framework test file name (e.g. GuidedSellingFlow.robot)"
+        required: true
+        default: "GuidedSellingFlow.robot"
       # rerun:
       #   description: "Enable rerun of failed tests?"
       #   required: true
@@ -105,6 +109,17 @@ jobs:
         id: cpu
         run: echo "cores=$(nproc)" >> $GITHUB_OUTPUT
 
+      - name: Validate test file exists
+        run: |
+          test_path="Tests/${{ github.event.inputs.test_file }}"
+          if [ ! -f "$test_path" ]; then
+            echo "::error::Test file '$test_path' not found!"
+            echo "Available test files:"
+            ls Tests
+            exit 1
+          fi
+          echo "✅ Found test file: $test_path"
+          
       - name: Run initial Robot tests
         id: initial_run       
         run: |
@@ -113,7 +128,7 @@ jobs:
                 --testlevelsplit \
                 --variable env:${{ github.event.inputs.env }} \
                 --outputdir Results \
-                Tests/GuidedSellingFlow.robot
+                Tests/${{ github.event.inputs.test_file }}
 
       # - name: Rerun failed tests and Merge Results
       #   if: steps.initial_run.outcome == 'failure' && github.event.inputs.rerun == 'true'
