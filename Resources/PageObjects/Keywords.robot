@@ -145,6 +145,7 @@ Start Guided Selling Until Disposition Step
 Perform Guided Selling Flow
     [Arguments]    ${url}    ${locationId}    ${expectedDispositionOptions}    ${expectedBurialServiceOptions}    ${expectedBurialFacilities}    ${expectedBurialNoFacilities}    ${expectedCremationServiceOptions}    ${expectedCremationFacilities}    ${expectedCremationNoFacilities}
     Open Storefront and Reject Cookies
+    ${url}=    Set Variable    ${url}?cache=false
     # Step 1: Get all disposition options
     Start Guided Selling Until Disposition Step    ${url}
     ${location}=    Get Text    ${locationName}
@@ -379,6 +380,7 @@ Perform Guided Selling Flow Single
 
 Perform Guided Selling Flow V2
     [Arguments]    ${url}    ${locationId}
+    ${url}=    Set Variable    ${url}?cache=false
     Open Storefront and Reject Cookies
     # Step 1: Get all disposition options
     Start Guided Selling Until Disposition Step    ${url}

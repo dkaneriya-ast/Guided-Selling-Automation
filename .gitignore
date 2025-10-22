@@ -6,9 +6,3 @@ venv/
 
 # Ignore everything in Results/
 Results/*
-
-# But do NOT ignore these specific files inside Results/
-!Results/log.html
-!Results/output.xml
-!Results/report.html
-!Results/results.xlsx

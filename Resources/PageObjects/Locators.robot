@@ -2,8 +2,8 @@
 
 # interaction locators
 ${rejectCookies}=                   xpath://a[@aria-controls="consent-dialog" and contains(text(), "Accept Without Tracking")]
-${locationName}=                    xpath://h1[@class="b-location_details-title"]
-${arrangeOnline}=                   xpath://button[contains(@class, 'b-location_details-btn') and contains(text(), 'Arrange Online')]
+${locationName}=                    xpath://h1[(contains(@class, 'b-ldp_header-title') or contains(@class, 'b-location_details-title'))]
+${arrangeOnline}=                   xpath:(//button[contains(@class, 'b-location_details-btn') and (normalize-space(.)='Arrange Online' or normalize-space(.)='Start Online Arrangement')])[last()]
 ${startPlanning}=                   xpath://button[@data-widget-event-click="startPlanning"]
 ${immediateNeedRadio}=              xpath://span[normalize-space(text())="I need to arrange a service now"]
 
