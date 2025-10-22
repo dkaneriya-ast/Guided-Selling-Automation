@@ -106,7 +106,7 @@ Start Guided Selling Until Disposition Step
     Click Element    ${arrangeOnline}
 
     # start planning inside GS
-    Wait Until Element Is Visible    ${startPlanning}
+    Wait Until Element Is Visible    ${startPlanning}    timeout=20s
     Click Element    ${startPlanning}
 
     # check and close active plan popup if present

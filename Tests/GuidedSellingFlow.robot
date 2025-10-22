@@ -1,6 +1,6 @@
 *** Settings ***
 Resource            ../Resources/PageObjects/Keywords.robot
-Library             DataDriver    file=../Data/stg.xlsx
+Library             DataDriver    file=../Data/stg location.xlsx
 
 Suite Setup         Run Setup Only Once    Initialize Parallel Result Storage
 Suite Teardown      Run Teardown Only Once    Write Test Results to Excel File
