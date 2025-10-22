@@ -93,6 +93,12 @@ Handle Active Plan Found Popup If Present
 Start Guided Selling Until Disposition Step
     [Arguments]    ${url}
     Go To    ${url}
+    ${vwoDebuggeriframeIsVisible}=    Run Keyword And Return Status    Wait Until Element Is Visible    ${vwoDebuggeriframe}    timeout=3s
+    IF    '${vwoDebuggeriframeIsVisible}' == 'True'
+        Select Frame    ${vwoDebuggeriframe}
+        Click Element    ${vwoDebugger}
+        Unselect Frame
+    END    
     # Wait For Condition	return document.readyState == "complete"    timeout=35s
     # arrange Online click
     Wait Until Keyword Succeeds    40s    2s    Wait Until Element Is Visible    ${arrangeOnline}
@@ -145,7 +151,6 @@ Start Guided Selling Until Disposition Step
 Perform Guided Selling Flow
     [Arguments]    ${url}    ${locationId}    ${expectedDispositionOptions}    ${expectedBurialServiceOptions}    ${expectedBurialFacilities}    ${expectedBurialNoFacilities}    ${expectedCremationServiceOptions}    ${expectedCremationFacilities}    ${expectedCremationNoFacilities}
     Open Storefront and Reject Cookies
-    ${url}=    Set Variable    ${url}?cache=false
     # Step 1: Get all disposition options
     Start Guided Selling Until Disposition Step    ${url}
     ${location}=    Get Text    ${locationName}
@@ -380,7 +385,6 @@ Perform Guided Selling Flow Single
 
 Perform Guided Selling Flow V2
     [Arguments]    ${url}    ${locationId}
-    ${url}=    Set Variable    ${url}?cache=false
     Open Storefront and Reject Cookies
     # Step 1: Get all disposition options
     Start Guided Selling Until Disposition Step    ${url}

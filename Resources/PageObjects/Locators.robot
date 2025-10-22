@@ -2,6 +2,8 @@
 
 # interaction locators
 ${rejectCookies}=                   xpath://a[@aria-controls="consent-dialog" and contains(text(), "Accept Without Tracking")]
+${vwoDebugger}=                     xpath://a[@title="Minimize preview mode"]
+${vwoDebuggeriframe}=               xpath://iframe[@id="vwo-debugger"]
 ${locationName}=                    xpath://h1[(contains(@class, 'b-ldp_header-title') or contains(@class, 'b-location_details-title'))]
 ${arrangeOnline}=                   xpath:(//button[contains(@class, 'b-location_details-btn') and (normalize-space(.)='Arrange Online' or normalize-space(.)='Start Online Arrangement')])[last()]
 ${startPlanning}=                   xpath://button[@data-widget-event-click="startPlanning"]
