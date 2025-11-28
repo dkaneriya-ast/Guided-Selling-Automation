@@ -5,7 +5,7 @@ ${rejectCookies}=                   xpath://a[@aria-controls="consent-dialog" an
 ${vwoDebugger}=                     xpath://a[@title="Minimize preview mode"]
 ${vwoDebuggeriframe}=               xpath://iframe[@id="vwo-debugger"]
 ${locationName}=                    xpath://h1[(contains(@class, 'b-ldp_header-title') or contains(@class, 'b-location_details-title'))]
-${arrangeOnline}=                   xpath:(//button[contains(@class, 'b-location_details-btn') and (normalize-space(.)='Arrange Online' or normalize-space(.)='Start Online Arrangement')])[last()]
+${arrangeOnline}=                   xpath:(//button[contains(@class, 'b-location_pricing-button') and contains(@data-bus-event-type, 'guided.selling.open') and normalize-space(.)='Start Online Arrangement'])[last()]
 ${startPlanning}=                   xpath://button[@data-widget-event-click="startPlanning"]
 ${immediateNeedRadio}=              xpath://span[normalize-space(text())="I need to arrange a service now"]
 

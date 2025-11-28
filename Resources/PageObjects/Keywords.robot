@@ -79,6 +79,7 @@ Fetch All Service Method Options
 
 Get Package Count for Current Selection
     Wait Until Element Is Visible    ${packageOptions}    timeout=20s
+    Sleep    2s
     ${packages}=    Get WebElements    ${packageOptions}
     ${count}=    Get Length    ${packages}
     RETURN    ${count}
@@ -103,6 +104,7 @@ Start Guided Selling Until Disposition Step
     # arrange Online click
     Wait Until Keyword Succeeds    40s    2s    Wait Until Element Is Visible    ${arrangeOnline}
     # Wait Until Element Is Visible    ${arrangeOnline}    timeout=20s
+    Scroll Element Into View    ${arrangeOnline}
     Click Element    ${arrangeOnline}
 
     # start planning inside GS
@@ -169,6 +171,10 @@ Perform Guided Selling Flow
         @{dispositionOptions}=    Fetch All Disposition Options
         ${disposition}=    Get From List    ${dispositionOptions}    ${dispIndex}
         ${dispLabel}=    Get Text    ${disposition}
+         # Check for null/Null disposition option before clicking
+        IF    '${dispLabel}' == 'null' or '${dispLabel}' == 'Null'
+            Fail    ${dispLabel} found at Location ID: ${locationId}
+        END
         Click Element    ${disposition}
         Click Element    ${continueCTA}
 
@@ -214,6 +220,7 @@ Perform Guided Selling Flow
             END
             ${service}=    Get WebElement    ${service}
             Execute Javascript    arguments[0].click();    ARGUMENTS    ${service}
+            Sleep    1s
             # Step 3: Package count
             ${packageCount}=    Get Package Count for Current Selection
             IF    ${packageCount} == 0
@@ -336,6 +343,7 @@ Perform Guided Selling Flow Single
             END
             ${service}=    Get WebElement    ${service}
             Execute Javascript    arguments[0].click();    ARGUMENTS    ${service}
+            Sleep    1s
             # Step 3: Package count
             ${packageCount}=    Get Package Count for Current Selection
             IF    ${packageCount} == 0
@@ -400,6 +408,10 @@ Perform Guided Selling Flow V2
         @{dispositionOptions}=    Fetch All Disposition Options
         ${disposition}=    Get From List    ${dispositionOptions}    ${dispIndex}
         ${dispLabel}=    Get Text    ${disposition}
+        # Check for null/Null disposition option before clicking
+        IF    '${dispLabel}' == 'null' or '${dispLabel}' == 'Null'
+            Fail    ${dispLabel} found at Location ID: ${locationId}
+        END
         Click Element    ${disposition}
         Click Element    ${continueCTA}
 
@@ -432,6 +444,7 @@ Perform Guided Selling Flow V2
             END
             ${service}=    Get WebElement    ${service}
             Execute Javascript    arguments[0].click();    ARGUMENTS    ${service}
+            Sleep    1s
             # Step 3: Package count
             ${packageCount}=    Get Package Count for Current Selection
             IF    ${packageCount} == 0
